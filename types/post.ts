@@ -99,7 +99,8 @@ export interface LessonsPost {
   title: string;
   brandLogo: boolean;
   swipe: boolean;
-  numbered: boolean;
+  /** Lesson number above each title: big, compact, or not shown. */
+  numbers: "large" | "small" | "off";
   follow: boolean;
   lessons: Lesson[];
 }

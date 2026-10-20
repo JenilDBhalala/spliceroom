@@ -57,17 +57,18 @@ export function lessonItem(ctx: Ctx, { brand, posts }: RenderState, sl: Slide): 
   ctx.fillRect(0, photoH, W, H - photoH);
   fadeBottom(ctx, H * 0.4, photoH);
 
-  // Big accent number overlapping the bottom of the photo.
+  // Accent number overlapping the bottom of the photo.
   let y = photoH - 20;
-  if (p.numbered) {
-    const num = String(i + 1).padStart(2, "0");
+  if (p.numbers !== "off") {
+    const size = p.numbers === "large" ? 170 : 110;
+    const baseline = photoH + 40 * (size / 170);
     shadowOn(ctx, 20);
-    ctx.font = anton(170);
+    ctx.font = anton(size);
     ctx.textAlign = "left";
     ctx.fillStyle = brand.accent;
-    ctx.fillText(num, left - 4, photoH + 40);
+    ctx.fillText(String(i + 1).padStart(2, "0"), left - 4 * (size / 170), baseline);
     shadowOff(ctx);
-    y = photoH + 80;
+    y = baseline + 40;
   }
 
   // Lesson title, then the body text in the space left above the footer.

@@ -1,11 +1,23 @@
-import type { Lesson, Slide } from "@/types/post";
+import type { Lesson, LessonsPost, Slide } from "@/types/post";
 import { useEditor, useField } from "@/lib/store";
 import ImageSlot from "@/components/fields/ImageSlot";
+import SelectField from "@/components/fields/SelectField";
 import TextField from "@/components/fields/TextField";
 import Toggle from "@/components/fields/Toggle";
 import { Group, HIGHLIGHT_TIP, OrderButtons } from "./ui";
 
 const P = ["posts", "lessons"] as const;
+const NUMBER_STYLES = [
+  ["small", "Small"],
+  ["large", "Large"],
+  ["off", "Hidden"],
+] as const;
+
+/** Shared by the cover and every lesson slide, since it applies to the whole post. */
+function NumbersField() {
+  const [numbers, setNumbers] = useField<LessonsPost["numbers"]>(P, "numbers");
+  return <SelectField label="Lesson numbers" value={numbers} options={NUMBER_STYLES} onChange={setNumbers} />;
+}
 
 export default function LessonsPanel({ slide }: { slide: Slide }) {
   return slide.kind === "lessonItem" ? <LessonSlide i={slide.i!} /> : <Cover />;
@@ -16,7 +28,6 @@ function Cover() {
   const [title, setTitle] = useField<string>(P, "title");
   const [brandLogo, setBrandLogo] = useField<boolean>(P, "brandLogo");
   const [swipe, setSwipe] = useField<boolean>(P, "swipe");
-  const [numbered, setNumbered] = useField<boolean>(P, "numbered");
   const [follow, setFollow] = useField<boolean>(P, "follow");
   return (
     <>
@@ -34,7 +45,7 @@ function Cover() {
         <Toggle label={'"Swipe" tag'} checked={swipe} onChange={setSwipe} />
       </Group>
       <Group title="Post">
-        <Toggle label="Number the lessons" checked={numbered} onChange={setNumbered} />
+        <NumbersField />
         <Toggle label="End with your follow card" checked={follow} onChange={setFollow} />
       </Group>
     </>
@@ -60,6 +71,9 @@ function LessonSlide({ i }: { i: number }) {
         onChange={(text) => update(path, { text })}
         tip={`Leave an empty line between paragraphs. ${HIGHLIGHT_TIP}`}
       />
+      <Group title="Post">
+        <NumbersField />
+      </Group>
       <Group title="Order">
         <OrderButtons index={i} count={count} what="lesson" onMove={(d) => moveItem("lessons", i, d)} onDelete={() => deleteItem("lessons", i)} />
       </Group>

@@ -96,7 +96,7 @@ const defaultPosts = (): Posts => ({
     title: "Dead Poets Society",
     brandLogo: true,
     swipe: true,
-    numbered: true,
+    numbers: "small",
     follow: true,
     lessons: [
       lesson("lesson 1", "Seize the day", '"Carpe diem. Seize the day, boys. *Make your lives extraordinary.*"\n\nStop waiting for the perfect moment. It is not coming.'),
