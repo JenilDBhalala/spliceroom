@@ -1,0 +1,718 @@
+<title>Spliceroom</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=Bebas+Neue&family=Cinzel:wght@700&family=Montserrat:wght@800;900&display=swap">
+<style>
+/* Layout: toolbar across the top; stage (big 4:5 preview + slide strip) left, slide editor right; stacks under 900px */
+:root{
+  --bg:#0d0f0d; --panel:#141714; --raise:#1c201c; --line:#2a302a; --fg:#e7ece6; --muted:#8e978d;
+  --accent:#bafeb8; --on-accent:#0b1a0c; --danger:#ff9483;
+  --ui:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --display:'Anton','Impact','Arial Narrow',sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--ui)}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--bg)}
+.mark{font:400 30px/1 var(--display);letter-spacing:.03em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.mark i{width:12px;height:12px;border-radius:50%;background:var(--accent);display:inline-block}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{background:none;border:1px solid transparent;border-radius:999px;padding:7px 14px;cursor:pointer;color:var(--muted);font-weight:600}
+.tab:hover{color:var(--fg);border-color:var(--line)}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--on-accent)}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.ghost{background:none}
+.btn.small{padding:5px 10px;font-size:12.5px}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 400px;min-height:0}
+.stage{display:flex;flex-direction:column;align-items:center;gap:14px;padding-block:22px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px;overflow:auto;min-width:0}
+.preview{width:min(100%,calc((100vh - 250px) * .8),560px);min-width:min(100%,280px);aspect-ratio:4/5;max-width:100%;position:relative;border-radius:6px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.55);background:#000}
+.preview canvas{width:100%;height:100%;display:block;touch-action:none}
+.preview.grab canvas{cursor:grab}
+.preview.dragging canvas{cursor:grabbing}
+.hint{color:var(--muted);font-size:12.5px;text-align:center}
+.strip{display:flex;gap:10px;overflow-x:auto;max-width:100%;padding:4px 4px 8px}
+.thumb{flex:none;display:flex;flex-direction:column;gap:5px;align-items:center;background:none;border:0;padding:0;cursor:pointer}
+.thumb canvas{width:76px;height:95px;border-radius:4px;display:block;background:#000}
+.thumb[aria-current="true"] canvas{outline:2px solid var(--accent);outline-offset:2px}
+.thumb span{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.add{flex:none;width:76px;height:95px;border:1.5px dashed var(--line);border-radius:4px;background:none;color:var(--muted);cursor:pointer;font-size:12px;font-weight:600;padding:6px}
+.add:hover{color:var(--accent);border-color:var(--accent)}
+aside{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding-block:20px 40px;padding-left:20px;padding-right:max(20px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px;min-width:0}
+.ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ph h2{margin:0;font:400 24px/1.1 var(--display);letter-spacing:.02em;text-transform:uppercase;text-wrap:balance}
+.ph small{color:var(--muted);font-variant-numeric:tabular-nums}
+.group{display:flex;flex-direction:column;gap:14px;padding-top:16px;border-top:1px solid var(--line)}
+.group > h3{margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field > label,.lbl{font-size:12px;font-weight:600;color:var(--fg)}
+.field .tip{font-size:12px;color:var(--muted)}
+.field input[type=text],.field textarea,.field select{background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+.field textarea{resize:vertical;min-height:90px;line-height:1.4}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row > .field{flex:1 1 90px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font-weight:500}
+.switch input{appearance:none;width:38px;height:22px;border-radius:999px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--fg);transition:transform .15s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{transform:translateX(16px);background:var(--on-accent)}
+.slot{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:10px}
+.slot.over{border-color:var(--accent)}
+.slot .pic{width:64px;height:64px;border-radius:6px;border:0;padding:0;cursor:pointer;background:repeating-conic-gradient(#232823 0 25%,#1a1e1a 0 50%) 0 0/12px 12px;overflow:hidden;display:grid;place-items:center;color:var(--muted);font-size:22px}
+.slot .pic img{width:100%;height:100%;object-fit:cover}
+.slot.contain .pic img{object-fit:contain}
+.slot .meta{display:flex;flex-direction:column;gap:6px;min-width:0}
+.slot .meta b{font-size:12.5px}
+.slot .meta small{color:var(--muted);font-size:11.5px}
+.slot .acts{display:flex;gap:6px;flex-wrap:wrap}
+.zoom{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.zoom input{flex:1;accent-color:var(--accent);min-width:0}
+.colorrow{display:flex;gap:8px;align-items:center}
+.colorrow input[type=color]{width:42px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--raise);padding:3px;cursor:pointer}
+.colorrow input[type=text]{flex:1}
+fieldset{border:1px solid var(--line);border-radius:12px;padding:12px;margin:0;display:flex;flex-direction:column;gap:12px;min-width:0}
+legend{padding:0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.note{color:var(--muted);font-size:12.5px;margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:20;max-width:calc(100% - 32px)}
+@media (max-width:900px){
+  .app{height:auto;min-height:100%}
+  main{grid-template-columns:minmax(0,1fr)}
+  aside{border-left:0;border-top:1px solid var(--line);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .stage{padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .preview{width:min(100%,480px)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header>
+    <div class="mark"><i></i>Spliceroom</div>
+    <nav class="tabs" role="tablist" aria-label="Post format" id="tabs"></nav>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="brandBtn" type="button">Brand &amp; profile</button>
+    <button class="btn primary" id="saveAll" type="button">Download post</button>
+  </header>
+  <main>
+    <section class="stage">
+      <div class="preview" id="preview"><canvas id="main" width="1080" height="1350" aria-label="Slide preview"></canvas></div>
+      <p class="hint" id="hint">Drag a photo on the preview to reposition it. Scroll on it to zoom. Paste an image with Ctrl+V.</p>
+      <div class="strip" id="strip"></div>
+    </section>
+    <aside id="panel" aria-live="polite"></aside>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const W = 1080, H = 1350;
+const $ = s => document.querySelector(s);
+const STORE_KEY = 'spliceroom.brand.v1';
+
+/* ---------- placeholder stills (so the tool opens in a working state) ---------- */
+const PH_HUES = [[18,200],[265,20],[200,35],[340,190],[40,220],[150,300],[220,10],[0,45]];
+function makePH(seed, label){
+  const c = document.createElement('canvas'); c.width = 1200; c.height = 1500;
+  const g = c.getContext('2d'); const [a,b] = PH_HUES[seed % PH_HUES.length];
+  const lg = g.createLinearGradient(0,0,1200,1500);
+  lg.addColorStop(0,`hsl(${a} 35% 18%)`); lg.addColorStop(1,`hsl(${b} 30% 9%)`);
+  g.fillStyle = lg; g.fillRect(0,0,1200,1500);
+  const glow = (x,y,r,h,al) => { const rg = g.createRadialGradient(x,y,0,x,y,r); rg.addColorStop(0,`hsla(${h} 70% 60% / ${al})`); rg.addColorStop(1,`hsla(${h} 70% 50% / 0)`); g.fillStyle = rg; g.fillRect(0,0,1200,1500); };
+  glow(300 + (seed*137)%600, 350 + (seed*91)%400, 700, a, .45);
+  glow(900 - (seed*53)%500, 1000, 600, b, .3);
+  // silhouette
+  g.fillStyle = 'rgba(0,0,0,.45)';
+  const cx = 420 + (seed*173)%380;
+  g.beginPath(); g.arc(cx, 620, 150, 0, Math.PI*2); g.fill();
+  g.beginPath(); g.moveTo(cx-330,1500); g.quadraticCurveTo(cx-300,820,cx,800); g.quadraticCurveTo(cx+300,820,cx+330,1500); g.fill();
+  const img = g.getImageData(0,0,1200,1500), d = img.data;
+  for (let i=0;i<d.length;i+=4){ const n=(Math.random()-.5)*22; d[i]+=n; d[i+1]+=n; d[i+2]+=n; }
+  g.putImageData(img,0,0);
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.textAlign = 'center';
+  g.font = '700 34px Archivo, sans-serif'; g.fillText('DROP A STILL HERE', 600, 330);
+  g.font = '500 28px Archivo, sans-serif'; g.fillStyle = 'rgba(255,255,255,.35)'; g.fillText(label || '', 600, 375);
+  return c;
+}
+let phSeed = 0;
+const slot = (label, opts={}) => ({ img:null, src:null, ph: opts.noPH ? null : makePH(phSeed++, label), zoom:1, ox:0, oy:0, contain: !!opts.contain });
+const adjOf = s => ({ zoom:1, ox:0, oy:0, srcSlot:s });
+const imgOf = s => { const base = s.srcSlot || s; return base.img || base.ph; };
+
+/* ---------- state ---------- */
+const brand = {
+  name:'yourpage', logo: slot('logo',{noPH:true,contain:true}), accent:'#bafeb8',
+  avatar: slot('avatar',{noPH:true}), display:'YOURPAGE', verified:true,
+  posts:'1,240', followers:'86.4K', following:'112',
+  bio:'▷ Daily cinema news, lists and trivia\n✉ hello@yourpage.com\n⇩ New post every day',
+  link:'linktr.ee/yourpage',
+  cta:'If you love movies and want to keep up with the latest cinema news, you should follow us right now'
+};
+const P = {
+  headline:{ img: slot('photo'), text:"David Fincher hid a Starbucks cup in *almost every scene* of Fight Club.", logo:true, swipe:true, clean:true },
+  list:{ panels:[slot('panel 1'),slot('panel 2'),slot('panel 3')], panelCount:3, text:'Every major video game adaptation', swipe:true, follow:false,
+    items:[
+      {img:slot('movie 1'), logo:slot('title logo',{noPH:true,contain:true}), title:'Fallout', font:'Montserrat', color:'#ffffff', rating:'8.3', showRating:true},
+      {img:slot('movie 2'), logo:slot('title logo',{noPH:true,contain:true}), title:'THE LAST OF US', font:'Bebas Neue', color:'#ffffff', rating:'8.6', showRating:true},
+      {img:slot('movie 3'), logo:slot('title logo',{noPH:true,contain:true}), title:'Warcraft', font:'Cinzel', color:'#d9d9d9', rating:'6.7', showRating:true},
+    ]},
+  news:{ img: slot('cover photo'), inset: slot('inset photo'), insetOn:true, text:'The Odyssey\nwas shot entirely\non IMAX\nfilm cameras', swipe:true, follow:true,
+    stories:[
+      {img:slot('story 1'), text:'Christopher Nolan shot every scene with IMAX 70mm film cameras.\n\nNo feature film had been made that way before.'},
+      {img:slot('story 2'), text:'"*It was the only way* to put the audience inside the myth."\n\nNolan, on choosing the format.'},
+    ]},
+  timeline:{ rows:[
+      {img:slot('row 1'), logo:slot('title logo',{noPH:true,contain:true}), title:'The Mummy', year:'1999'},
+      {img:slot('row 2'), logo:slot('title logo',{noPH:true,contain:true}), title:'The Mummy Returns', year:'2001'},
+      {img:slot('row 3'), logo:slot('title logo',{noPH:true,contain:true}), title:'Tomb of the Dragon Emperor', year:'2008'},
+      {img:slot('row 4'), logo:slot('title logo',{noPH:true,contain:true}), title:'The Mummy', year:'2027'},
+    ]},
+  follow:{}
+};
+P.headline.cleanAdj = adjOf(P.headline.img);
+
+const FORMATS = [
+  {id:'headline', name:'Headline'},
+  {id:'list', name:'List'},
+  {id:'news', name:'News story'},
+  {id:'timeline', name:'Timeline'},
+  {id:'follow', name:'Follow card'},
+];
+let fmt = 'headline', sel = 0, mode = 'slide', activeSlot = null, regions = [];
+
+function slidesFor(f = fmt){
+  const p = P[f];
+  if (f === 'headline') return [{kind:'hlCover', label:'Cover'}, ...(p.clean ? [{kind:'hlClean', label:'Photo'}] : [])];
+  if (f === 'list') return [{kind:'listCover', label:'Cover'}, ...p.items.map((it,i)=>({kind:'listItem', i, label:it.title||`Movie ${i+1}`})), ...(p.follow?[{kind:'follow',label:'Follow'}]:[])];
+  if (f === 'news') return [{kind:'newsCover', label:'Cover'}, ...p.stories.map((s,i)=>({kind:'newsStory', i, label:`Story ${i+1}`})), ...(p.follow?[{kind:'follow',label:'Follow'}]:[])];
+  if (f === 'timeline') return [{kind:'timeline', label:'Timeline'}];
+  return [{kind:'follow', label:'Follow card'}];
+}
+
+/* ---------- canvas helpers ---------- */
+function drawCover(ctx, s, x, y, w, h){
+  const im = imgOf(s); if (!im) return;
+  const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+  const sc = Math.max(w/iw, h/ih) * s.zoom, dw = iw*sc, dh = ih*sc;
+  const ex = dw - w, ey = dh - h;
+  ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+  ctx.drawImage(im, x - ex*(s.ox+1)/2, y - ey*(s.oy+1)/2, dw, dh);
+  ctx.restore();
+}
+function drawContain(ctx, im, cx, cy, mw, mh){
+  const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+  const sc = Math.min(mw/iw, mh/ih), w = iw*sc, h = ih*sc;
+  ctx.drawImage(im, cx - w/2, cy - h/2, w, h);
+  return {w,h};
+}
+function fadeBottom(ctx, y0, y1){
+  const g = ctx.createLinearGradient(0,y0,0,y1);
+  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.45,'rgba(0,0,0,.55)'); g.addColorStop(.8,'rgba(0,0,0,.92)'); g.addColorStop(1,'#000');
+  ctx.fillStyle = g; ctx.fillRect(0,y0,W,y1-y0);
+  ctx.fillStyle = '#000'; ctx.fillRect(0,y1,W,H-y1);
+}
+function rrect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function shadowOn(ctx, b=14){ ctx.shadowColor='rgba(0,0,0,.55)'; ctx.shadowBlur=b; ctx.shadowOffsetY=2; }
+function shadowOff(ctx){ ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0; }
+
+// rich text: *stars* mark highlighted words, \n forces a break
+function toks(text, upper=true){
+  const out = [];
+  (text||'').split('\n').forEach((line, li) => {
+    if (li) out.push({br:true});
+    line.split(/(\*[^*]+\*)/).forEach(part => {
+      if (!part) return;
+      const em = /^\*[^*]+\*$/.test(part);
+      const s = em ? part.slice(1,-1) : part;
+      s.split(/\s+/).filter(Boolean).forEach(t => out.push({t: upper ? t.toUpperCase() : t, em}));
+    });
+  });
+  return out;
+}
+function wrap(ctx, tk, maxW){
+  const sp = ctx.measureText(' ').width; const lines = [{w:0, words:[]}]; let over = false;
+  for (const t of tk){
+    if (t.br){ lines.push({w:0, words:[]}); continue; }
+    const w = ctx.measureText(t.t).width; if (w > maxW) over = true;
+    let L = lines[lines.length-1];
+    if (L.words.length && L.w + sp + w > maxW){ L = {w:0, words:[]}; lines.push(L); }
+    L.w += (L.words.length ? sp : 0) + w; L.words.push({...t, w});
+  }
+  return {lines: lines.filter(l=>l.words.length), sp, over};
+}
+const blockH = (n, size, lh) => size * (0.74 + (n-1)*lh);
+function fitText(ctx, tk, fontFn, maxW, maxH, lh, maxS, minS=20){
+  let res;
+  for (let s = maxS; s >= minS; s -= 2){
+    ctx.font = fontFn(s); res = wrap(ctx, tk, maxW); res.size = s;
+    if (!res.over && blockH(res.lines.length, s, lh) <= maxH) return res;
+  }
+  return res;
+}
+function drawLines(ctx, res, cx, top, lh, color, emColor){
+  res.lines.forEach((L, i) => {
+    let x = cx - L.w/2; const y = top + res.size*0.74 + i*res.size*lh;
+    L.words.forEach(wd => { ctx.fillStyle = wd.em ? emColor : color; ctx.textAlign='left'; ctx.fillText(wd.t, x, y); x += wd.w + res.sp; });
+  });
+}
+function swipeTag(ctx, text, x, y){
+  ctx.font = '900 34px Montserrat, Arial Black, sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = brand.accent; ctx.fillText(text, x, y);
+}
+
+/* ---------- slide renderers (each returns drag regions) ---------- */
+function brandMark(ctx){
+  if (brand.logo.img){ shadowOn(ctx,18); const im = brand.logo.img; const iw=im.naturalWidth, ih=im.naturalHeight; const sc=Math.min(300/iw, 86/ih); ctx.drawImage(im, 64, 70, iw*sc, ih*sc); shadowOff(ctx); return; }
+  ctx.font = '900 64px Montserrat, Arial Black, sans-serif'; ctx.textAlign='left'; shadowOn(ctx,18);
+  ctx.fillStyle = brand.accent; ctx.fillText((brand.name||'').toLowerCase(), 64, 134); shadowOff(ctx);
+}
+const R = {
+  hlCover(ctx){
+    const p = P.headline;
+    drawCover(ctx, p.img, 0, 0, W, H);
+    fadeBottom(ctx, H*0.5, H*0.71);
+    if (p.logo) brandMark(ctx);
+    if (p.swipe){
+      shadowOn(ctx,16); ctx.font = '400 62px "Bebas Neue", Impact, sans-serif'; ctx.textAlign='right'; ctx.fillStyle='#fff';
+      ctx.fillText('SWIPE LEFT', W-150, 136);
+      ctx.strokeStyle='#fff'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.lineJoin='round';
+      ctx.beginPath(); ctx.moveTo(W-66,112); ctx.lineTo(W-126,112); ctx.moveTo(W-108,94); ctx.lineTo(W-126,112); ctx.lineTo(W-108,130); ctx.stroke();
+      shadowOff(ctx);
+    }
+    const lh = 1.1, fit = fitText(ctx, toks(p.text), s=>`900 ${s}px Montserrat, Arial Black, sans-serif`, W-150, H*0.27, lh, 96, 34);
+    const top = H*0.715 + (H*0.27 - blockH(fit.lines.length, fit.size, lh))/2;
+    drawLines(ctx, fit, W/2, top, lh, '#fff', brand.accent);
+    return [{x:0,y:0,w:W,h:H,s:p.img}];
+  },
+  hlClean(ctx){ drawCover(ctx, P.headline.cleanAdj, 0, 0, W, H); return [{x:0,y:0,w:W,h:H,s:P.headline.cleanAdj}]; },
+  listCover(ctx){
+    const p = P.list, n = p.panelCount, gap = 6, top = H*0.72, pw = (W - gap*(n-1))/n, regs = [];
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+    for (let i=0;i<n;i++){ const x = i*(pw+gap); drawCover(ctx, p.panels[i], x, 0, pw, top); regs.push({x,y:0,w:pw,h:top,s:p.panels[i]}); }
+    fadeBottom(ctx, top-260, top);
+    const lh = 1.0, fit = fitText(ctx, toks(p.text), s=>`900 ${s}px Montserrat, Arial Black, sans-serif`, W-110, H*0.36, lh, 150, 40);
+    const bottom = H - 120, bh = blockH(fit.lines.length, fit.size, lh);
+    drawLines(ctx, fit, W/2, bottom - bh, lh, '#fff', brand.accent);
+    if (p.swipe) swipeTag(ctx, 'SWIPE', W-70, H-50);
+    return regs;
+  },
+  listItem(ctx, sl){
+    const it = P.list.items[sl.i];
+    drawCover(ctx, it.img, 0, 0, W, H);
+    fadeBottom(ctx, H*0.6, H*0.78);
+    const cy = it.showRating ? 1100 : 1150;
+    if (it.logo.img){ shadowOn(ctx,24); drawContain(ctx, it.logo.img, W/2, cy, 640, 230); shadowOff(ctx); }
+    else {
+      const font = s => `${it.font==='Montserrat'?'900':it.font==='Cinzel'?'700':'400'} ${s}px "${it.font}"`;
+      const lh = 0.98, fit = fitText(ctx, toks(it.title, it.font!=='Cinzel' ? false : true), font, 760, 230, lh, it.font==='Cinzel'?120:150, 30);
+      ctx.save(); if (it.font==='Cinzel') ctx.letterSpacing = '10px';
+      drawLines(ctx, fit, W/2, cy - blockH(fit.lines.length, fit.size, lh)/2, lh, it.color, brand.accent); ctx.restore();
+    }
+    if (it.showRating && it.rating){
+      ctx.font = '900 56px Montserrat, Arial Black, sans-serif'; const rw = ctx.measureText(it.rating).width;
+      const bw = 124, bh = 64, total = bw + 22 + rw, x0 = W/2 - total/2, by = 1250;
+      ctx.fillStyle = '#F5C518'; rrect(ctx, x0, by, bw, bh, 8); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.font = '400 46px Anton, Impact, sans-serif'; ctx.textAlign='center'; ctx.fillText('IMDb', x0 + bw/2, by + 51);
+      ctx.fillStyle = '#fff'; ctx.font = '900 56px Montserrat, Arial Black, sans-serif'; ctx.textAlign='left'; ctx.fillText(it.rating, x0 + bw + 22, by + 54);
+    }
+    return [{x:0,y:0,w:W,h:H,s:it.img}];
+  },
+  newsCover(ctx){
+    const p = P.news, regs = [{x:0,y:0,w:W,h:H,s:p.img}];
+    drawCover(ctx, p.img, 0, 0, W, H);
+    fadeBottom(ctx, H*0.52, H*0.8);
+    if (p.insetOn){
+      const cx = 220, cy = 220, r = 165;
+      ctx.save(); shadowOn(ctx,30); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx,cy,r+9,0,Math.PI*2); ctx.fill(); shadowOff(ctx);
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip(); drawCover(ctx, p.inset, cx-r, cy-r, r*2, r*2); ctx.restore();
+      regs.push({x:cx-r,y:cy-r,w:r*2,h:r*2,s:p.inset});
+    }
+    // each line is sized to fill the full width
+    let lines = (p.text||'').toUpperCase().split('\n').map(s=>s.trim()).filter(Boolean);
+    if (lines.length === 1 && lines[0].length > 16){
+      const words = lines[0].split(/\s+/); lines = []; let cur = '';
+      words.forEach(w => { if (cur && (cur+' '+w).length > 15){ lines.push(cur); cur = w; } else cur = cur ? cur+' '+w : w; }); if (cur) lines.push(cur);
+    }
+    const maxW = W - 150, gap = 16; ctx.font = '900 100px Montserrat, Arial Black, sans-serif';
+    let sizes = lines.map(l => Math.min(210, 100*maxW/Math.max(1, ctx.measureText(l).width)));
+    let total = sizes.reduce((a,s)=>a+s*0.73,0) + gap*(lines.length-1);
+    const maxH = H*0.4; if (total > maxH){ const f = (maxH - gap*(lines.length-1)) / (total - gap*(lines.length-1)); sizes = sizes.map(s=>s*f); total = maxH; }
+    let y = H - 105 - total; ctx.fillStyle = '#fff'; ctx.textAlign='center';
+    lines.forEach((l,i) => { ctx.font = `900 ${sizes[i]}px Montserrat, Arial Black, sans-serif`; y += sizes[i]*0.73; ctx.fillText(l, W/2, y); y += gap; });
+    if (p.swipe) swipeTag(ctx, 'SWIPE', W-70, H-42);
+    return regs;
+  },
+  newsStory(ctx, sl){
+    const st = P.news.stories[sl.i];
+    drawCover(ctx, st.img, 0, 0, W, H*0.74);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, H*0.74, W, H);
+    fadeBottom(ctx, H*0.56, H*0.72);
+    const paras = (st.text||'').split(/\n\s*\n/).map(s=>s.trim()).filter(Boolean);
+    const lh = 1.13, maxW = W-130, maxH = H*0.25, font = s=>`800 ${s}px Montserrat, Arial Black, sans-serif`;
+    let fits, size;
+    for (size = 56; size >= 22; size -= 2){
+      ctx.font = font(size);
+      fits = paras.map(pp => { const r = wrap(ctx, toks(pp.replace(/\n/g,' ')), maxW); r.size = size; return r; });
+      const tot = fits.reduce((a,f)=>a+blockH(f.lines.length,size,lh),0) + size*0.95*(fits.length-1);
+      if (!fits.some(f=>f.over) && tot <= maxH) break;
+    }
+    const tot = fits.reduce((a,f)=>a+blockH(f.lines.length,size,lh),0) + size*0.95*(fits.length-1);
+    let y = H*0.735 + (maxH - tot)/2 + 10;
+    fits.forEach(f => { drawLines(ctx, f, W/2, y, lh, '#fff', brand.accent); y += blockH(f.lines.length,size,lh) + size*0.95; });
+    return [{x:0,y:0,w:W,h:H*0.74,s:st.img}];
+  },
+  timeline(ctx){
+    const rows = P.timeline.rows, n = rows.length, rh = H/n, regs = [];
+    rows.forEach((r,i) => {
+      const y = i*rh; drawCover(ctx, r.img, 0, y, W, rh); regs.push({x:0,y,w:W,h:rh,s:r.img});
+      const g = ctx.createLinearGradient(0,0,W*0.6,0); g.addColorStop(0,'rgba(0,0,0,.6)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(0,y,W*0.6,rh);
+      const g2 = ctx.createLinearGradient(W*0.6,0,W,0); g2.addColorStop(0,'rgba(0,0,0,0)'); g2.addColorStop(1,'rgba(0,0,0,.45)');
+      ctx.fillStyle = g2; ctx.fillRect(W*0.6,y,W*0.4,rh);
+      const cy = y + rh/2;
+      shadowOn(ctx,20);
+      if (r.logo.img){ drawContain(ctx, r.logo.img, 50 + 175, cy, 350, rh*0.55); }
+      else {
+        const lh = 1.0; ctx.save(); ctx.letterSpacing='4px';
+        const fit = fitText(ctx, toks(r.title), s=>`700 ${s}px Cinzel, Georgia, serif`, 380, rh*0.55, lh, 64, 20);
+        const left = 60; fit.lines.forEach((L,li)=>{ ctx.font=`700 ${fit.size}px Cinzel, Georgia, serif`; ctx.textAlign='left'; ctx.fillStyle='#f1e4c4';
+          ctx.fillText(L.words.map(w=>w.t).join(' '), left, cy - blockH(fit.lines.length,fit.size,lh)/2 + fit.size*0.74 + li*fit.size*lh); });
+        ctx.restore();
+      }
+      const ys = Math.min(100, rh*0.28); ctx.font = `900 ${ys}px Montserrat, Arial Black, sans-serif`; ctx.textAlign='right'; ctx.fillStyle='#fff';
+      ctx.fillText(r.year||'', W-50, cy + ys*0.36);
+      shadowOff(ctx);
+      if (i) { ctx.fillStyle='#000'; ctx.fillRect(0,y-2,W,4); }
+    });
+    return regs;
+  },
+  follow(ctx){
+    ctx.fillStyle = '#141418'; ctx.fillRect(0,0,W,H);
+    const vg = ctx.createRadialGradient(W/2,H*0.4,100,W/2,H*0.4,900); vg.addColorStop(0,'rgba(255,255,255,.05)'); vg.addColorStop(1,'rgba(0,0,0,.35)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=2;
+    [[340,0,120,1350],[340,0,760,1350],[780,90,560,1350],[780,90,1080,700],[0,640,1080,240],[0,1100,560,560]].forEach(([a,b,c,d])=>{ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(c,d);ctx.stroke();});
+    const bio = (brand.bio||'').split('\n').filter(s=>s.trim()).slice(0,5);
+    const cx0 = 100, cy0 = 280, cw = 880, chh = 290 + bio.length*50 + (brand.link?56:0);
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=50; ctx.shadowOffsetY=12;
+    ctx.fillStyle='#0b0b0f'; rrect(ctx,cx0,cy0,cw,chh,56); ctx.fill(); ctx.restore();
+    ctx.strokeStyle='rgba(255,255,255,.09)'; ctx.lineWidth=3; rrect(ctx,cx0,cy0,cw,chh,56); ctx.stroke();
+    // avatar with ring
+    const ax = cx0+140, ay = cy0+140, ar = 104;
+    const rg = ctx.createLinearGradient(ax-ar,ay+ar,ax+ar,ay-ar);
+    ['#feda75','#fa7e1e','#d62976','#962fbf','#4f5bd5'].forEach((c,i)=>rg.addColorStop(i/4,c));
+    ctx.strokeStyle=rg; ctx.lineWidth=10; ctx.beginPath(); ctx.arc(ax,ay,ar+12,0,Math.PI*2); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.arc(ax,ay,ar,0,Math.PI*2); ctx.clip(); ctx.fillStyle='#000'; ctx.fillRect(ax-ar,ay-ar,ar*2,ar*2);
+    if (brand.avatar.img) drawCover(ctx, brand.avatar, ax-ar, ay-ar, ar*2, ar*2);
+    else if (brand.logo.img) drawContain(ctx, brand.logo.img, ax, ay, ar*1.6, ar*1.2);
+    else { const t=(brand.name||'').toUpperCase(); ctx.font='900 40px Montserrat, Arial Black, sans-serif'; const tw=ctx.measureText(t).width; const s=Math.min(46, 40*(ar*1.6)/Math.max(tw,1)); ctx.font=`900 ${s}px Montserrat, Arial Black, sans-serif`; ctx.fillStyle=brand.accent; ctx.textAlign='center'; ctx.fillText(t,ax,ay+s*0.36); }
+    ctx.restore();
+    // name + stats
+    const tx = cx0+290; ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font='700 42px Archivo, Arial, sans-serif';
+    const nm = brand.display||''; ctx.fillText(nm, tx, cy0+90);
+    if (brand.verified){ const vx = tx + ctx.measureText(nm).width + 34, vy = cy0+76; ctx.fillStyle='#3897f0'; ctx.beginPath();
+      for (let k=0;k<24;k++){ const a=k/24*Math.PI*2, rr = k%2?21:25; ctx.lineTo(vx+Math.cos(a)*rr, vy+Math.sin(a)*rr); } ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(vx-9,vy+1); ctx.lineTo(vx-2,vy+8); ctx.lineTo(vx+10,vy-7); ctx.stroke(); }
+    [[brand.posts,'posts'],[brand.followers,'followers'],[brand.following,'following']].forEach(([v,l],i)=>{
+      const x = tx + i*200; ctx.fillStyle='#fff'; ctx.font='600 42px Archivo, Arial, sans-serif'; ctx.fillText(v||'0', x, cy0+170);
+      ctx.fillStyle='#d8d8de'; ctx.font='400 36px Archivo, Arial, sans-serif'; ctx.fillText(l, x, cy0+215); });
+    // bio
+    let by = cy0+310; ctx.font='400 35px Archivo, Arial, sans-serif';
+    bio.forEach(line => { let x = cx0+42; line.split(/((?<![\w.])@[\w.]+|#\w+)/).forEach(part => { if(!part) return; ctx.fillStyle = /^[@#]/.test(part) && !part.includes('.com') ? '#a8a9f8' : '#f1f1f4'; ctx.fillText(part, x, by); x += ctx.measureText(part).width; }); by += 50; });
+    if (brand.link){ by += 6; const lx = cx0+58; ctx.strokeStyle='#a8a9f8'; ctx.lineWidth=4;
+      ctx.save(); ctx.translate(lx, by-12); ctx.rotate(-Math.PI/4); rrect(ctx,-22,-8,24,16,8); ctx.stroke(); rrect(ctx,-2,-8,24,16,8); ctx.stroke(); ctx.restore();
+      ctx.fillStyle='#a8a9f8'; ctx.font='400 35px Archivo, Arial, sans-serif'; ctx.fillText(brand.link, cx0+96, by); }
+    // headline
+    const top = cy0 + chh + 70, maxH = H - 50 - top, maxW = W - 80, lh = 1.0;
+    const fit = fitText(ctx, toks(brand.cta), s=>`400 ${s}px Anton, Impact, sans-serif`, maxW*0.9, maxH, lh, 150, 40);
+    const bh = blockH(fit.lines.length, fit.size, lh), t0 = top + Math.max(0,(maxH-bh)/2);
+    ctx.textAlign='center';
+    fit.lines.forEach((L,i)=>{ const y = t0 + fit.size*0.74 + i*fit.size*lh; const sx = Math.min(1.18, maxW/L.w);
+      ctx.save(); ctx.translate(W/2,y); ctx.scale(sx,1); let x = -L.w/2;
+      L.words.forEach(wd=>{ ctx.fillStyle = wd.em ? brand.accent : '#fff'; ctx.textAlign='left'; ctx.fillText(wd.t,x,0); x += wd.w + fit.sp; }); ctx.restore(); });
+    return [];
+  }
+};
+function renderSlide(ctx, sl){
+  ctx.save(); ctx.clearRect(0,0,W,H); ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H); ctx.textBaseline='alphabetic';
+  let regs = [];
+  try { regs = R[sl.kind](ctx, sl) || []; } catch(e){ console.error(e); }
+  ctx.restore(); return regs;
+}
+
+/* ---------- rendering loop ---------- */
+const mainCtx = $('#main').getContext('2d');
+const off = document.createElement('canvas'); off.width = W; off.height = H; const offCtx = off.getContext('2d');
+let raf = 0;
+function schedule(){ if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); }
+function draw(){
+  const sls = slidesFor(); if (sel >= sls.length) sel = sls.length-1;
+  regions = renderSlide(mainCtx, sls[sel]);
+  document.querySelectorAll('.thumb canvas').forEach((c,i) => { if (!sls[i]) return; renderSlide(offCtx, sls[i]); const t = c.getContext('2d'); t.clearRect(0,0,c.width,c.height); t.drawImage(off,0,0,c.width,c.height); });
+  $('#preview').classList.toggle('grab', regions.length > 0);
+}
+
+/* ---------- UI building ---------- */
+const h = (tag, attrs={}, ...kids) => { const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)){ if (k==='on') Object.entries(v).forEach(([ev,fn])=>e.addEventListener(ev,fn)); else if (k==='class') e.className=v; else if (v!==false && v!=null) e.setAttribute(k, v===true?'':v); }
+  kids.flat().forEach(k => k!=null && e.append(k)); return e; };
+let uid = 0;
+function textField(label, obj, key, {area=false, tip='', onChange}={}){
+  const id = `f${uid++}`;
+  const input = area ? h('textarea',{id, rows:4}) : h('input',{id, type:'text'});
+  input.value = obj[key] ?? '';
+  input.addEventListener('input', () => { obj[key] = input.value; onChange && onChange(); schedule(); });
+  return h('div',{class:'field'}, h('label',{for:id},label), input, tip ? h('span',{class:'tip'},tip) : null);
+}
+function toggle(label, obj, key, after){
+  const id = `f${uid++}`, cb = h('input',{type:'checkbox', id}); cb.checked = !!obj[key];
+  cb.addEventListener('change', () => { obj[key] = cb.checked; after ? after() : schedule(); });
+  return h('label',{class:'switch', for:id}, h('span',{},label), cb);
+}
+function selectField(label, obj, key, options, after){
+  const id = `f${uid++}`, s = h('select',{id}, options.map(o => h('option',{value:o[0]},o[1]))); s.value = obj[key];
+  s.addEventListener('change', () => { obj[key] = isNaN(+s.value) ? s.value : +s.value; after ? after() : schedule(); });
+  return h('div',{class:'field'}, h('label',{for:id},label), s);
+}
+function colorField(label, obj, key, after){
+  const id = `f${uid++}`, pick = h('input',{type:'color', id:id+'c', 'aria-label':label}), txt = h('input',{type:'text', id});
+  pick.value = obj[key]; txt.value = obj[key];
+  const set = v => { obj[key] = v; after && after(); schedule(); };
+  pick.addEventListener('input', () => { txt.value = pick.value; set(pick.value); });
+  txt.addEventListener('input', () => { const v = txt.value.trim(); if (/^#[0-9a-f]{6}$/i.test(v)){ pick.value = v; set(v); } });
+  return h('div',{class:'field'}, h('label',{for:id},label), h('div',{class:'colorrow'}, pick, txt));
+}
+function loadFile(file, s, done){
+  if (!file || !file.type.startsWith('image/')) return toast('That file is not an image. Use JPG, PNG or WebP.');
+  const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => { s.img = im; s.src = fr.result; s.zoom = 1; s.ox = 0; s.oy = 0; done && done(); schedule(); if (s === brand.logo || s === brand.avatar) saveBrand(); }; im.src = fr.result; };
+  fr.readAsDataURL(file);
+}
+function slotUI(label, s, {tip='Click, drop or paste an image', adj=null, contain=false, empty=''}={}){
+  const fileIn = h('input',{type:'file', accept:'image/*', hidden:true});
+  const pic = h('button',{class:'pic', type:'button', 'aria-label':`Choose ${label}`});
+  const zoomRow = h('div',{class:'zoom'}); const acts = h('div',{class:'acts'});
+  const box = h('div',{class:'slot'+(contain?' contain':'')}, pic, h('div',{class:'meta'}, h('b',{},label), h('small',{}, s.img ? tip : (empty || tip)), zoomRow, acts), fileIn);
+  const target = adj || s;
+  const refresh = () => {
+    pic.replaceChildren(s.img ? h('img',{src:s.src, alt:''}) : h('span',{},'+'));
+    zoomRow.replaceChildren(); acts.replaceChildren();
+    if ((s.img || s.ph) && !contain){
+      const z = h('input',{type:'range', min:1, max:3, step:0.01, 'aria-label':`${label} zoom`}); z.value = target.zoom;
+      z.addEventListener('input', () => { target.zoom = +z.value; schedule(); });
+      zoomRow.append(h('span',{},'Zoom'), z);
+      acts.append(h('button',{class:'btn small ghost', type:'button', on:{click:()=>{ target.zoom=1; target.ox=0; target.oy=0; z.value=1; schedule(); }}},'Reset position'));
+    }
+    if (s.img && !adj) acts.append(h('button',{class:'btn small ghost danger', type:'button', on:{click:()=>{ s.img=null; s.src=null; refresh(); schedule(); if (s===brand.logo||s===brand.avatar) saveBrand(); }}},'Remove'));
+  };
+  pic.addEventListener('click', () => { activeSlot = s; fileIn.click(); });
+  box.addEventListener('pointerdown', () => { activeSlot = s; });
+  fileIn.addEventListener('change', () => { loadFile(fileIn.files[0], s, refresh); fileIn.value=''; });
+  box.addEventListener('dragover', e => { e.preventDefault(); box.classList.add('over'); });
+  box.addEventListener('dragleave', () => box.classList.remove('over'));
+  box.addEventListener('drop', e => { e.preventDefault(); box.classList.remove('over'); loadFile(e.dataTransfer.files[0], s, refresh); });
+  s._refresh = refresh; refresh();
+  return box;
+}
+const group = (title, ...kids) => h('div',{class:'group'}, title ? h('h3',{},title) : null, ...kids);
+const rebuild = () => { buildStrip(); buildPanel(); schedule(); };
+function moveBtns(arr, i, what){
+  return h('div',{class:'row'},
+    h('button',{class:'btn small', type:'button', disabled:i===0, on:{click:()=>{ [arr[i-1],arr[i]]=[arr[i],arr[i-1]]; sel--; rebuild(); }}}, '← Move earlier'),
+    h('button',{class:'btn small', type:'button', disabled:i===arr.length-1, on:{click:()=>{ [arr[i+1],arr[i]]=[arr[i],arr[i+1]]; sel++; rebuild(); }}}, 'Move later →'),
+    h('button',{class:'btn small danger', type:'button', disabled:arr.length<=1, on:{click:()=>{ arr.splice(i,1); sel=Math.max(0,sel-1); rebuild(); }}}, `Delete ${what}`));
+}
+const TITLE_FONTS = [['Montserrat','Montserrat Black'],['Anton','Anton'],['Bebas Neue','Bebas Neue'],['Cinzel','Cinzel (epic)']];
+
+function buildPanel(){
+  const panel = $('#panel'); panel.replaceChildren();
+  if (mode === 'brand') return buildBrand(panel);
+  const sls = slidesFor(), sl = sls[sel];
+  const titles = {hlCover:'Headline cover', hlClean:'Clean photo', listCover:'List cover', listItem:'Movie card', newsCover:'News cover', newsStory:'Story slide', timeline:'Timeline', follow:'Follow card'};
+  panel.append(h('div',{class:'ph'}, h('h2',{}, titles[sl.kind]), h('small',{}, `Slide ${sel+1} of ${sls.length}`)));
+  const hl = 'Wrap words in *stars* to color them with your accent.';
+  if (sl.kind === 'hlCover'){
+    const p = P.headline;
+    panel.append(slotUI('Photo', p.img),
+      textField('Headline', p, 'text', {area:true, tip:hl}),
+      group('On the cover', toggle('Page logo, top left', p,'logo'), toggle('"Swipe left", top right', p,'swipe')),
+      group('Post', toggle('Add the clean photo as slide 2', p,'clean', rebuild)));
+  }
+  if (sl.kind === 'hlClean'){
+    panel.append(h('p',{class:'note'},'This slide shows the cover photo with no text. Its framing is set separately from the cover.'),
+      slotUI('Cover photo', P.headline.img, {adj:P.headline.cleanAdj}));
+  }
+  if (sl.kind === 'listCover'){
+    const p = P.list;
+    panel.append(selectField('Photos across the top', p, 'panelCount', [[2,'2 photos'],[3,'3 photos'],[4,'4 photos']], () => { while (p.panels.length < p.panelCount) p.panels.push(slot(`panel ${p.panels.length+1}`)); rebuild(); }),
+      ...p.panels.slice(0,p.panelCount).map((s,i)=>slotUI(`Photo ${i+1}`, s)),
+      textField('Headline', p, 'text', {area:true, tip:hl}),
+      group('Post', toggle('"Swipe" tag', p,'swipe'), toggle('End with your follow card', p,'follow', rebuild)));
+  }
+  if (sl.kind === 'listItem'){
+    const it = P.list.items[sl.i];
+    panel.append(slotUI('Photo', it.img),
+      slotUI('Title logo', it.logo, {contain:true, empty:'Optional. A transparent PNG of the title. Without one, the title text is used.'}),
+      textField('Title text', it, 'title', {tip:'Shown when there is no title logo.', onChange:()=>{ const t = document.querySelectorAll('.thumb span')[sel]; if (t) t.textContent = `${sel+1}. ${it.title}`; }}),
+      h('div',{class:'row'}, selectField('Title font', it, 'font', TITLE_FONTS), colorField('Title color', it, 'color')),
+      group('Rating', h('div',{class:'row'}, textField('IMDb rating', it, 'rating')), toggle('Show rating', it, 'showRating')),
+      group('Order', moveBtns(P.list.items, sl.i, 'movie')));
+  }
+  if (sl.kind === 'newsCover'){
+    const p = P.news;
+    panel.append(slotUI('Cover photo', p.img),
+      slotUI('Round inset photo', p.inset, {tip:'Usually the real person behind the character.'}),
+      toggle('Show round inset', p, 'insetOn'),
+      textField('Headline', p, 'text', {area:true, tip:'Each line stretches to the full width. Press Enter where a new line should start.'}),
+      group('Post', toggle('"Swipe" tag', p,'swipe'), toggle('End with your follow card', p,'follow', rebuild)));
+  }
+  if (sl.kind === 'newsStory'){
+    const st = P.news.stories[sl.i];
+    panel.append(slotUI('Photo', st.img),
+      textField('Text', st, 'text', {area:true, tip:'Leave an empty line between paragraphs. '+hl}),
+      group('Order', moveBtns(P.news.stories, sl.i, 'slide')));
+  }
+  if (sl.kind === 'timeline'){
+    const rows = P.timeline.rows;
+    rows.forEach((r,i) => panel.append(h('fieldset',{}, h('legend',{},`Row ${i+1}`),
+      slotUI('Photo', r.img),
+      slotUI('Title logo', r.logo, {contain:true, empty:'Optional transparent PNG. Without one, the title text is used.'}),
+      h('div',{class:'row'}, textField('Title', r, 'title'), textField('Year', r, 'year')),
+      rows.length > 2 ? h('button',{class:'btn small danger', type:'button', on:{click:()=>{ rows.splice(i,1); rebuild(); }}},'Remove row') : null)));
+    panel.append(h('button',{class:'btn', type:'button', disabled:rows.length>=5, on:{click:()=>{ rows.push({img:slot(`row ${rows.length+1}`), logo:slot('title logo',{noPH:true,contain:true}), title:'', year:''}); rebuild(); }}}, '+ Add row'));
+  }
+  if (sl.kind === 'follow'){
+    panel.append(textField('Headline', brand, 'cta', {area:true, tip:hl, onChange:saveBrand}),
+      h('p',{class:'note'},'The profile card uses your saved brand details. They are reused on every post.'),
+      h('button',{class:'btn', type:'button', on:{click:()=>{ mode='brand'; buildPanel(); }}}, 'Edit profile and logo'));
+  }
+}
+function buildBrand(panel){
+  const sb = () => saveBrand();
+  panel.append(h('div',{class:'ph'}, h('h2',{},'Brand & profile'), h('button',{class:'btn small primary', type:'button', on:{click:()=>{ mode='slide'; buildPanel(); }}},'Done')),
+    h('p',{class:'note'},'Saved in this browser and used on every post.'),
+    group('Page',
+      textField('Page name', brand, 'name', {tip:'Shown top left on headline covers when there is no logo image.', onChange:sb}),
+      slotUI('Logo image', brand.logo, {contain:true, empty:'Optional transparent PNG. Replaces the page name.'}),
+      colorField('Theme color', brand, 'accent', () => { applyAccent(); sb(); })),
+    group('Follow card profile',
+      slotUI('Profile picture', brand.avatar, {empty:'Optional. Without one, your logo or page name is used.'}),
+      textField('Display name', brand, 'display', {onChange:sb}),
+      toggle('Blue tick', brand, 'verified', () => { sb(); schedule(); }),
+      h('div',{class:'row'}, textField('Posts', brand,'posts',{onChange:sb}), textField('Followers', brand,'followers',{onChange:sb}), textField('Following', brand,'following',{onChange:sb})),
+      textField('Bio', brand, 'bio', {area:true, tip:'One line per row, up to 5. @handles show in purple.', onChange:sb}),
+      textField('Link', brand, 'link', {onChange:sb}),
+      textField('Follow headline', brand, 'cta', {area:true, onChange:sb})));
+}
+function buildStrip(){
+  const strip = $('#strip'); strip.replaceChildren();
+  const sls = slidesFor();
+  sls.forEach((sl,i) => {
+    const c = h('canvas',{width:152, height:190});
+    strip.append(h('button',{class:'thumb', type:'button', 'aria-current': i===sel ? 'true' : 'false', 'aria-label':`Slide ${i+1}: ${sl.label}`,
+      on:{click:()=>{ sel=i; mode='slide'; buildStrip(); buildPanel(); schedule(); }}}, c, h('span',{}, `${i+1}. ${sl.label}`)));
+  });
+  if (fmt === 'list') strip.append(h('button',{class:'add', type:'button', on:{click:()=>{ P.list.items.push({img:slot(`movie ${P.list.items.length+1}`), logo:slot('title logo',{noPH:true,contain:true}), title:'', font:'Montserrat', color:'#ffffff', rating:'', showRating:true}); sel = P.list.items.length; mode='slide'; rebuild(); }}}, '+ Add movie'));
+  if (fmt === 'news') strip.append(h('button',{class:'add', type:'button', on:{click:()=>{ P.news.stories.push({img:slot(`story ${P.news.stories.length+1}`), text:''}); sel = P.news.stories.length; mode='slide'; rebuild(); }}}, '+ Add story slide'));
+}
+function buildTabs(){
+  const tabs = $('#tabs'); tabs.replaceChildren();
+  FORMATS.forEach(f => tabs.append(h('button',{class:'tab', role:'tab', type:'button', 'aria-selected': f.id===fmt ? 'true':'false', on:{click:()=>{ fmt=f.id; sel=0; mode='slide'; buildTabs(); rebuild(); }}}, f.name)));
+}
+
+/* ---------- drag / zoom on preview ---------- */
+const cv = $('#main'); let drag = null;
+const toCanvas = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height, W / r.width]; };
+const hit = (x,y) => [...regions].reverse().find(r => x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h);
+function extents(reg){ const im = imgOf(reg.s); if (!im) return [0,0]; const iw = im.naturalWidth||im.width, ih = im.naturalHeight||im.height; const sc = Math.max(reg.w/iw, reg.h/ih) * reg.s.zoom; return [iw*sc - reg.w, ih*sc - reg.h]; }
+cv.addEventListener('pointerdown', e => { const [x,y] = toCanvas(e); const reg = hit(x,y); if (!reg) return; drag = {reg, x, y}; cv.setPointerCapture(e.pointerId); $('#preview').classList.add('dragging'); });
+cv.addEventListener('pointermove', e => { if (!drag) return; const [x,y] = toCanvas(e); const [ex,ey] = extents(drag.reg); const s = drag.reg.s;
+  if (ex > 0) s.ox = Math.max(-1, Math.min(1, s.ox - 2*(x-drag.x)/ex));
+  if (ey > 0) s.oy = Math.max(-1, Math.min(1, s.oy - 2*(y-drag.y)/ey));
+  drag.x = x; drag.y = y; schedule(); });
+const endDrag = () => { drag = null; $('#preview').classList.remove('dragging'); };
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+cv.addEventListener('wheel', e => { const [x,y] = toCanvas(e); const reg = hit(x,y); if (!reg) return; e.preventDefault();
+  reg.s.zoom = Math.max(1, Math.min(3, reg.s.zoom * (e.deltaY < 0 ? 1.06 : 1/1.06))); schedule(); }, {passive:false});
+cv.addEventListener('dragover', e => e.preventDefault());
+cv.addEventListener('drop', e => { e.preventDefault(); const [x,y] = toCanvas(e); const reg = hit(x,y) || regions[0]; if (!reg) return; const s = reg.s.srcSlot || reg.s; loadFile(e.dataTransfer.files[0], s, () => { buildPanel(); }); });
+document.addEventListener('paste', e => {
+  const item = [...(e.clipboardData?.items||[])].find(i => i.type.startsWith('image/')); if (!item) return;
+  e.preventDefault();
+  const target = activeSlot || (regions[0] && (regions[0].s.srcSlot || regions[0].s)); if (!target) return toast('Click a photo box first, then paste.');
+  loadFile(item.getAsFile(), target, () => buildPanel());
+});
+
+/* ---------- brand persistence ---------- */
+function applyAccent(){ document.documentElement.style.setProperty('--accent', brand.accent); }
+let saveT = 0;
+function saveBrand(){ clearTimeout(saveT); saveT = setTimeout(() => {
+  const data = {...brand, logo: brand.logo.src, avatar: brand.avatar.src};
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+  catch { try { localStorage.setItem(STORE_KEY, JSON.stringify({...data, logo:null, avatar:null})); toast('Logo images are too large to remember. Text settings were saved.'); } catch {} }
+}, 400); }
+function loadBrand(){
+  let d; try { d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch { d = null; }
+  if (!d) return;
+  ['name','accent','display','verified','posts','followers','following','bio','link','cta'].forEach(k => { if (d[k] !== undefined) brand[k] = d[k]; });
+  [['logo',brand.logo],['avatar',brand.avatar]].forEach(([k,s]) => { if (d[k]){ const im = new Image(); im.onload = () => { s.img = im; s.src = d[k]; s._refresh && s._refresh(); schedule(); }; im.src = d[k]; } });
+}
+
+/* ---------- export ---------- */
+let downloads = null;
+const CRC = (() => { const t = new Uint32Array(256); for (let n=0;n<256;n++){ let c=n; for (let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i=0;i<b.length;i++) c = CRC[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; };
+function zip(files){
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  const d = new Date(), time = (d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), date = ((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  for (const f of files){
+    const name = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0,true); lh.setUint16(8,0,true); lh.setUint16(10,time,true); lh.setUint16(12,date,true);
+    lh.setUint32(14,crc,true); lh.setUint32(18,sz,true); lh.setUint32(22,sz,true); lh.setUint16(26,name.length,true); lh.setUint16(28,0,true);
+    parts.push(lh, name, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0,true); ch.setUint16(10,0,true); ch.setUint16(12,time,true); ch.setUint16(14,date,true);
+    ch.setUint32(16,crc,true); ch.setUint32(20,sz,true); ch.setUint32(24,sz,true); ch.setUint16(28,name.length,true); ch.setUint32(42,offset,true);
+    central.push(ch, name); offset += 30 + name.length + sz;
+  }
+  const cdSize = central.reduce((a,p)=>a+(p.byteLength ?? p.length),0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,cdSize,true); end.setUint32(16,offset,true);
+  return new Blob([...parts, ...central, end], {type:'application/zip'});
+}
+const slideBlob = sl => new Promise(res => { const c = document.createElement('canvas'); c.width=W; c.height=H; renderSlide(c.getContext('2d'), sl); c.toBlob(res, 'image/png'); });
+async function saveFile(filename, data){
+  if (!downloads) return toast('Saving is not available in this view. Right-click the big preview and choose "Save image".');
+  try { await downloads.save({filename, data}); toast('Saved'); }
+  catch (e) { toast(e && e.code === 'declined' ? 'Download cancelled' : e && e.code === 'rate_limited' ? 'A save is already waiting for you to confirm.' : 'Could not save the file. Try again.'); }
+}
+$('#saveAll').addEventListener('click', async () => {
+  const btn = $('#saveAll'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Preparing…';
+  try {
+    const sls = slidesFor(), stamp = new Date().toISOString().slice(0,10), base = `${(brand.name||'post').replace(/[^\w-]+/g,'')}-${fmt}-${stamp}`;
+    if (sls.length === 1){ await saveFile(`${base}.png`, await slideBlob(sls[0])); }
+    else {
+      const files = [];
+      for (let i=0;i<sls.length;i++){ const b = await slideBlob(sls[i]); files.push({name:`${String(i+1).padStart(2,'0')}-${sls[i].label.replace(/[^\w-]+/g,'-').toLowerCase()}.png`, data:new Uint8Array(await b.arrayBuffer())}); }
+      await saveFile(`${base}.zip`, zip(files));
+    }
+  } finally { btn.disabled = false; btn.textContent = old; }
+});
+$('#brandBtn').addEventListener('click', () => { mode = mode === 'brand' ? 'slide' : 'brand'; buildPanel(); });
+
+let toastT = 0;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+
+/* ---------- boot ---------- */
+loadBrand(); applyAccent(); buildTabs(); rebuild();
+Promise.all(['900 60px Montserrat, Arial Black, sans-serif','800 60px Montserrat, Arial Black, sans-serif','400 60px Anton, Impact, sans-serif','400 60px "Bebas Neue", Impact, sans-serif','700 60px Cinzel, Georgia, serif','400 30px Archivo, Arial, sans-serif','600 30px Archivo, Arial, sans-serif','700 30px Archivo, Arial, sans-serif'].map(f => document.fonts.load(f).catch(()=>{})))
+  .then(() => document.fonts.ready).then(schedule);
+(async () => { try { if (window.claude && window.claude.use) downloads = await window.claude.use('downloads'); } catch { downloads = null; } })();
+</script>
