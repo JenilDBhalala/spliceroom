@@ -69,8 +69,9 @@
     @apply text-danger;
   }
 
+  /* 16px on phones stops iOS from zooming into a focused field. */
   .input {
-    @apply w-full min-w-0 rounded-lg border border-line bg-raise px-[11px] py-[9px];
+    @apply w-full min-w-0 rounded-lg border border-line bg-raise px-[11px] py-[9px] text-base md:text-sm;
   }
 
   .switch {
@@ -94,11 +95,11 @@
     background: repeating-conic-gradient(#232823 0 25%, #1a1e1a 0 50%) 0 0 / 12px 12px;
   }
 
+  /* --ar is width / height of the post; the preview fits the space without scrolling. */
   .preview {
-    width: min(100%, calc((100vh - 250px) * 0.8), 560px);
-    min-width: min(100%, 280px);
-    @media (max-width: 900px) {
-      width: min(100%, 480px);
+    width: min(100%, calc(40dvh * var(--ar)));
+    @media (min-width: 768px) {
+      width: min(100%, calc((100dvh - 210px) * var(--ar)), 600px);
     }
   }
 }

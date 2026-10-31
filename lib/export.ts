@@ -1,12 +1,12 @@
 import JSZip from "jszip";
 import type { FormatId, RenderState, Slide } from "@/types/post";
-import { H, W, renderSlide, slidesFor } from "@/lib/render";
+import { renderSlide, slidesFor } from "@/lib/render";
 
 const slideBlob = (state: RenderState, slide: Slide, scale: number) =>
   new Promise<Blob>((resolve, reject) => {
     const c = document.createElement("canvas");
-    c.width = W * scale;
-    c.height = H * scale;
+    c.width = state.frame.W * scale;
+    c.height = state.frame.H * scale;
     renderSlide(c.getContext("2d")!, state, slide, scale);
     c.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not encode PNG"))), "image/png");
   });
@@ -27,7 +27,7 @@ export async function downloadPost(state: RenderState, fmt: FormatId) {
   const slides = slidesFor(fmt, state.posts);
   const scale = state.brand.exportScale ?? 2;
   const stamp = new Date().toISOString().slice(0, 10);
-  const base = `${(state.brand.name || "post").replace(/[^\w-]+/g, "")}-${fmt}-${stamp}`;
+  const base = `${(state.brand.name || "post").replace(/[^\w-]+/g, "")}-${fmt}-${state.frame.W}x${state.frame.H}-${stamp}`;
   if (slides.length === 1) {
     saveBlob(`${base}.png`, await slideBlob(state, slides[0], scale));
     return;

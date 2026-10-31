@@ -1,10 +1,11 @@
 import type { Region, RenderState } from "@/types/post";
 import {
-  H, W, type Ctx, blockH, cinzel, drawContain, drawCover, fitText, imageOf, montserrat, shadowOff, shadowOn, toks, uploaded,
+  type Ctx, blockH, drawContain, drawCover, fitStyled, fontFace, imageOf, montserrat, shadowOff, shadowOn, uploaded,
 } from "./helpers";
 
-export function timeline(ctx: Ctx, { posts }: RenderState): Region[] {
-  const rows = posts.timeline.rows;
+export function timeline(ctx: Ctx, { posts, frame }: RenderState): Region[] {
+  const { W, H } = frame;
+  const { rows, style } = posts.timeline;
   const n = rows.length;
   const rh = H / n;
   const regs: Region[] = [];
@@ -30,13 +31,12 @@ export function timeline(ctx: Ctx, { posts }: RenderState): Region[] {
     } else {
       const lh = 1.0;
       ctx.save();
-      ctx.letterSpacing = "4px";
-      const fit = fitText(ctx, toks(r.title), cinzel, 380, rh * 0.55, lh, 64, 20);
+      const fit = fitStyled(ctx, r.title, style, 380, rh * 0.55, lh, 64, 20);
       const left = 60;
       fit.lines.forEach((L, li) => {
-        ctx.font = cinzel(fit.size);
+        ctx.font = fontFace(style.font, fit.size);
         ctx.textAlign = "left";
-        ctx.fillStyle = "#f1e4c4";
+        ctx.fillStyle = style.color;
         ctx.fillText(
           L.words.map((w) => w.t).join(" "),
           left,

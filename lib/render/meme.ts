@@ -1,0 +1,79 @@
+import type { Brand, Frame, Region, RenderState } from "@/types/post";
+import { type Ctx, type Wrapped, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, imageOf, shadowOff, shadowOn } from "./helpers";
+
+export function meme(ctx: Ctx, state: RenderState): Region[] {
+  return state.posts.meme.mode === "caption" ? captionMeme(ctx, state) : classicMeme(ctx, state);
+}
+
+/** Impact-style text with a black outline, top and bottom of the photo. */
+function classicMeme(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
+  const { W, H } = frame;
+  const p = posts.meme;
+  const accent = accentOf(brand, p.style);
+  drawCover(ctx, imageOf(p.img), p.img, 0, 0, W, H);
+  const lh = 1.02;
+  const maxH = H * 0.27;
+  if (p.top.trim()) {
+    ctx.save();
+    const fit = fitStyled(ctx, p.top, p.style, W - 80, maxH, lh, 120, 36);
+    drawOutlined(ctx, fit, W / 2, 46, lh, p.style.color, accent);
+    ctx.restore();
+  }
+  if (p.bottom.trim()) {
+    ctx.save();
+    const fit = fitStyled(ctx, p.bottom, p.style, W - 80, maxH, lh, 120, 36);
+    drawOutlined(ctx, fit, W / 2, H - 46 - blockH(fit.lines.length, fit.size, lh), lh, p.style.color, accent);
+    ctx.restore();
+  }
+  if (p.watermark) watermark(ctx, brand, frame);
+  return [{ x: 0, y: 0, w: W, h: H, path: ["posts", "meme", "img"] }];
+}
+
+/** White caption bar sized to the text, photo filling the rest. */
+function captionMeme(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
+  const { W, H } = frame;
+  const p = posts.meme;
+  const padX = 60;
+  const padY = 54;
+  const lh = 1.22;
+  ctx.save();
+  const fit = fitStyled(ctx, p.caption, p.style, W - padX * 2, H * 0.45, lh, 64, 30);
+  const barH = p.caption.trim() ? blockH(fit.lines.length, fit.size, lh) + padY * 2 : 0;
+  ctx.fillStyle = p.bar === "dark" ? "#000" : "#fff";
+  ctx.fillRect(0, 0, W, barH);
+  if (barH) drawLines(ctx, fit, padX, padY, lh, p.style.color, accentOf(brand, p.style), "left");
+  ctx.restore();
+  drawCover(ctx, imageOf(p.img), p.img, 0, barH, W, H - barH);
+  if (p.watermark) watermark(ctx, brand, frame);
+  return [{ x: 0, y: barH, w: W, h: H - barH, path: ["posts", "meme", "img"] }];
+}
+
+function drawOutlined(ctx: Ctx, res: Wrapped, cx: number, top: number, lh: number, color: string, emColor: string) {
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = Math.max(4, res.size * 0.13);
+  res.lines.forEach((L, i) => {
+    let x = cx - L.w / 2;
+    const y = top + res.size * 0.74 + i * res.size * lh;
+    L.words.forEach((wd, k) => {
+      if (k && !wd.join) x += res.sp;
+      ctx.textAlign = "left";
+      ctx.strokeText(wd.t, x, y);
+      ctx.fillStyle = wd.em ? emColor : color;
+      ctx.fillText(wd.t, x, y);
+      x += wd.w;
+    });
+  });
+}
+
+/** Small page handle in the bottom-right corner. */
+export function watermark(ctx: Ctx, brand: Brand, { W, H }: Frame) {
+  if (!brand.name) return;
+  ctx.font = archivo(600, 28);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "rgba(255,255,255,.75)";
+  shadowOn(ctx, 8);
+  ctx.fillText(`@${brand.name}`, W - 28, H - 28);
+  shadowOff(ctx);
+}

@@ -1,9 +1,14 @@
 import type { Region, RenderState } from "@/types/post";
 import {
-  H, W, type Ctx, anton, archivo, blockH, drawContain, drawCover, fitText, montserrat, rrect, setShadow, toks, uploaded,
+  type Ctx, accentOf, archivo, blockH, drawContain, drawCover, fitStyled, montserrat, rrect, setShadow, uploaded, verifiedBadge,
 } from "./helpers";
 
-export function follow(ctx: Ctx, { brand }: RenderState): Region[] {
+export function follow(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
+  const { W, H } = frame;
+  const style = posts.follow.style;
+  const accent = accentOf(brand, style);
+  // Laid out for 1350 tall; vertical positions scale with the slide height.
+  const ky = H / 1350;
   ctx.fillStyle = "#141418";
   ctx.fillRect(0, 0, W, H);
   const vg = ctx.createRadialGradient(W / 2, H * 0.4, 100, W / 2, H * 0.4, 900);
@@ -16,14 +21,14 @@ export function follow(ctx: Ctx, { brand }: RenderState): Region[] {
   [[340, 0, 120, 1350], [340, 0, 760, 1350], [780, 90, 560, 1350], [780, 90, 1080, 700], [0, 640, 1080, 240], [0, 1100, 560, 560]].forEach(
     ([a, b, c, d]) => {
       ctx.beginPath();
-      ctx.moveTo(a, b);
-      ctx.lineTo(c, d);
+      ctx.moveTo(a, b * ky);
+      ctx.lineTo(c, d * ky);
       ctx.stroke();
     },
   );
   const bio = (brand.bio || "").split("\n").filter((s) => s.trim()).slice(0, 5);
   const cx0 = 100;
-  const cy0 = 280;
+  const cy0 = 280 * ky;
   const cw = 880;
   const chh = 290 + bio.length * 50 + (brand.link ? 56 : 0);
   ctx.save();
@@ -64,7 +69,7 @@ export function follow(ctx: Ctx, { brand }: RenderState): Region[] {
     const tw = ctx.measureText(t).width;
     const s = Math.min(46, (40 * (ar * 1.6)) / Math.max(tw, 1));
     ctx.font = montserrat(900, s);
-    ctx.fillStyle = brand.accent;
+    ctx.fillStyle = accent;
     ctx.textAlign = "center";
     ctx.fillText(t, ax, ay + s * 0.36);
   }
@@ -78,28 +83,9 @@ export function follow(ctx: Ctx, { brand }: RenderState): Region[] {
   const nm = brand.display || "";
   ctx.fillText(nm, tx, cy0 + 90);
   if (brand.verified) {
-    // Badge drawn at 72% of the reference size: 9px gap after the name, centered on its cap height.
-    const s = 0.72;
-    const vx = tx + ctx.measureText(nm).width + 9 + 25 * s;
-    const vy = cy0 + 75;
-    ctx.fillStyle = "#3897f0";
-    ctx.beginPath();
-    for (let k = 0; k < 24; k++) {
-      const a = (k / 24) * Math.PI * 2;
-      const rr = (k % 2 ? 21 : 25) * s;
-      ctx.lineTo(vx + Math.cos(a) * rr, vy + Math.sin(a) * rr);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 5 * s;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(vx - 9 * s, vy + 1 * s);
-    ctx.lineTo(vx - 2 * s, vy + 8 * s);
-    ctx.lineTo(vx + 10 * s, vy - 7 * s);
-    ctx.stroke();
+    // 72% of the reference badge: 9px gap after the name, centered on its cap height.
+    const k = 0.72;
+    verifiedBadge(ctx, tx + ctx.measureText(nm).width + 9 + 25 * k, cy0 + 75, k);
   }
   [[brand.posts, "posts"], [brand.followers, "followers"], [brand.following, "following"]].forEach(([v, l], i) => {
     const x = tx + i * 200;
@@ -147,7 +133,8 @@ export function follow(ctx: Ctx, { brand }: RenderState): Region[] {
   const maxH = H - 50 - top;
   const maxW = W - 80;
   const lh = 1.0;
-  const fit = fitText(ctx, toks(brand.cta), anton, maxW * 0.9, maxH, lh, 150, 40);
+  ctx.save();
+  const fit = fitStyled(ctx, brand.cta, style, maxW * 0.9, maxH, lh, 150, 40);
   const bh = blockH(fit.lines.length, fit.size, lh);
   const t0 = top + Math.max(0, (maxH - bh) / 2);
   ctx.textAlign = "center";
@@ -160,12 +147,13 @@ export function follow(ctx: Ctx, { brand }: RenderState): Region[] {
     let x = -L.w / 2;
     L.words.forEach((wd, k) => {
       if (k && !wd.join) x += fit.sp;
-      ctx.fillStyle = wd.em ? brand.accent : "#fff";
+      ctx.fillStyle = wd.em ? accent : style.color;
       ctx.textAlign = "left";
       ctx.fillText(wd.t, x, 0);
       x += wd.w;
     });
     ctx.restore();
   });
+  ctx.restore();
   return [];
 }

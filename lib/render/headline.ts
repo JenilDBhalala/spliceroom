@@ -1,6 +1,6 @@
 import type { Brand, Region, RenderState } from "@/types/post";
 import {
-  H, W, type Ctx, blockH, drawCover, drawLines, fadeBottom, fitText, imageOf, montserrat, bebas, shadowOff, shadowOn, toks, uploaded,
+  type Ctx, accentOf, bebas, blockH, drawCover, drawLines, fadeBottom, fitStyled, imageOf, montserrat, shadowOff, shadowOn, uploaded,
 } from "./helpers";
 
 /** Page logo, or the page name in the accent color, top left. */
@@ -21,10 +21,11 @@ export function brandMark(ctx: Ctx, brand: Brand) {
   shadowOff(ctx);
 }
 
-export function hlCover(ctx: Ctx, { brand, posts }: RenderState): Region[] {
+export function hlCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
+  const { W, H } = frame;
   const p = posts.headline;
   drawCover(ctx, imageOf(p.img), p.img, 0, 0, W, H);
-  fadeBottom(ctx, H * 0.5, H * 0.71);
+  fadeBottom(ctx, frame, H * 0.5, H * 0.71);
   if (p.logo) brandMark(ctx, brand);
   if (p.swipe) {
     shadowOn(ctx, 16);
@@ -46,13 +47,16 @@ export function hlCover(ctx: Ctx, { brand, posts }: RenderState): Region[] {
     shadowOff(ctx);
   }
   const lh = 1.1;
-  const fit = fitText(ctx, toks(p.text), (s) => montserrat(900, s), W - 150, H * 0.27, lh, 96, 34);
+  ctx.save();
+  const fit = fitStyled(ctx, p.text, p.style, W - 150, H * 0.27, lh, 96, 34);
   const top = H * 0.715 + (H * 0.27 - blockH(fit.lines.length, fit.size, lh)) / 2;
-  drawLines(ctx, fit, W / 2, top, lh, "#fff", brand.accent);
+  drawLines(ctx, fit, W / 2, top, lh, p.style.color, accentOf(brand, p.style));
+  ctx.restore();
   return [{ x: 0, y: 0, w: W, h: H, path: ["posts", "headline", "img"] }];
 }
 
-export function hlClean(ctx: Ctx, { posts }: RenderState): Region[] {
+export function hlClean(ctx: Ctx, { posts, frame }: RenderState): Region[] {
+  const { W, H } = frame;
   const p = posts.headline;
   drawCover(ctx, imageOf(p.img), p.cleanAdj, 0, 0, W, H);
   return [{ x: 0, y: 0, w: W, h: H, path: ["posts", "headline", "cleanAdj"], imgPath: ["posts", "headline", "img"] }];

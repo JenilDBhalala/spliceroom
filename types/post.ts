@@ -1,4 +1,24 @@
-export type FormatId = "headline" | "list" | "news" | "lessons" | "timeline" | "follow";
+export type FormatId =
+  | "headline"
+  | "list"
+  | "news"
+  | "lessons"
+  | "timeline"
+  | "poster"
+  | "meme"
+  | "tweet"
+  | "quote"
+  | "compare"
+  | "follow";
+
+/** Output shape: portrait feed post, square post, or story / reel cover. */
+export type PostSize = "portrait" | "square" | "story";
+
+/** Slide size in layout units (always 1080 wide). */
+export interface Frame {
+  W: number;
+  H: number;
+}
 
 /** Where a photo sits inside its box: zoom 1–3, offsets -1…1 (0 = centered). */
 export interface Framing {
@@ -19,7 +39,20 @@ export interface ImageSlot extends Framing {
   ph: Placeholder | null;
 }
 
-export type TitleFont = "Montserrat" | "Anton" | "Bebas Neue" | "Cinzel";
+export type FontKey = "Montserrat" | "Anton" | "Bebas Neue" | "Cinzel" | "Playfair Display" | "Archivo";
+/** Kept for list movie titles, which pick from the same fonts. */
+export type TitleFont = FontKey;
+
+/** Look of a template's main text; every template has one. */
+export interface TextStyle {
+  font: FontKey;
+  color: string;
+  /** Highlight color for *starred* words; null = the brand theme color. */
+  accent: string | null;
+  /** Text size multiplier, 0.7–1.3. */
+  scale: number;
+  caps: boolean;
+}
 
 export interface Brand {
   name: string;
@@ -34,11 +67,12 @@ export interface Brand {
   bio: string;
   link: string;
   cta: string;
-  /** Download size: 1 = 1080×1350, 2 = 2160×2700. */
+  /** Download size: 1 = 1080 wide, 2 = 2160 wide. */
   exportScale: 1 | 2;
 }
 
 export interface HeadlinePost {
+  style: TextStyle;
   img: ImageSlot;
   /** Framing of the same photo on the clean slide. */
   cleanAdj: Framing;
@@ -60,6 +94,7 @@ export interface ListItem {
 }
 
 export interface ListPost {
+  style: TextStyle;
   panels: ImageSlot[];
   panelCount: 2 | 3 | 4;
   text: string;
@@ -75,6 +110,7 @@ export interface Story {
 }
 
 export interface NewsPost {
+  style: TextStyle;
   img: ImageSlot;
   inset: ImageSlot;
   insetOn: boolean;
@@ -92,6 +128,7 @@ export interface Lesson {
 }
 
 export interface LessonsPost {
+  style: TextStyle;
   img: ImageSlot;
   /** Optional transparent PNG of the movie title, replacing the title text. */
   logo: ImageSlot;
@@ -114,7 +151,75 @@ export interface TimelineRow {
 }
 
 export interface TimelinePost {
+  style: TextStyle;
   rows: TimelineRow[];
+}
+
+export interface PosterPost {
+  style: TextStyle;
+  img: ImageSlot;
+  logo: ImageSlot;
+  /** Names across the top, e.g. the cast. */
+  top: string;
+  tagline: string;
+  title: string;
+  date: string;
+  credits: string;
+}
+
+export interface MemePost {
+  style: TextStyle;
+  /** classic: text on the photo; caption: white bar above the photo. */
+  mode: "classic" | "caption";
+  /** Caption bar color in caption mode. */
+  bar: "light" | "dark";
+  img: ImageSlot;
+  top: string;
+  bottom: string;
+  caption: string;
+  watermark: boolean;
+}
+
+export interface TweetPost {
+  style: TextStyle;
+  theme: "dark" | "light";
+  background: string;
+  /** Use the brand's display name, handle, avatar and tick. */
+  useBrand: boolean;
+  name: string;
+  handle: string;
+  avatar: ImageSlot;
+  verified: boolean;
+  text: string;
+  img: ImageSlot;
+  showImage: boolean;
+  date: string;
+}
+
+export interface QuotePost {
+  style: TextStyle;
+  img: ImageSlot;
+  usePhoto: boolean;
+  background: string;
+  quote: string;
+  author: string;
+  source: string;
+  watermark: boolean;
+}
+
+export interface ComparePost {
+  style: TextStyle;
+  layout: "side" | "stack";
+  headline: string;
+  left: ImageSlot;
+  right: ImageSlot;
+  leftLabel: string;
+  rightLabel: string;
+  vs: boolean;
+}
+
+export interface FollowPost {
+  style: TextStyle;
 }
 
 export interface Posts {
@@ -123,6 +228,12 @@ export interface Posts {
   news: NewsPost;
   lessons: LessonsPost;
   timeline: TimelinePost;
+  poster: PosterPost;
+  meme: MemePost;
+  tweet: TweetPost;
+  quote: QuotePost;
+  compare: ComparePost;
+  follow: FollowPost;
 }
 
 export type SlideKind =
@@ -135,6 +246,11 @@ export type SlideKind =
   | "lessonsCover"
   | "lessonItem"
   | "timeline"
+  | "poster"
+  | "meme"
+  | "tweet"
+  | "quote"
+  | "compare"
   | "follow";
 
 export interface Slide {
@@ -147,7 +263,7 @@ export interface Slide {
 /** Path into editor state, e.g. ["posts", "list", "items", 0, "img"]. */
 export type SlotPath = readonly (string | number)[];
 
-/** A draggable photo area on a rendered slide (canvas pixels). */
+/** A draggable photo area on a rendered slide (layout units). */
 export interface Region {
   x: number;
   y: number;
@@ -162,4 +278,5 @@ export interface Region {
 export interface RenderState {
   brand: Brand;
   posts: Posts;
+  frame: Frame;
 }

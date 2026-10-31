@@ -6,6 +6,7 @@ export const F = {
   bebas: '"Bebas Neue"',
   cinzel: "Cinzel",
   archivo: "Archivo",
+  playfair: '"Playfair Display"',
 };
 
 export function setFontFamilies(families: Partial<typeof F>) {
@@ -19,6 +20,7 @@ export const fontFaces = () => [
   `400 60px ${F.anton}`,
   `400 60px ${F.bebas}`,
   `700 60px ${F.cinzel}`,
+  `700 60px ${F.playfair}`,
   `400 30px ${F.archivo}`,
   `500 30px ${F.archivo}`,
   `600 30px ${F.archivo}`,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { canvasFamilies } from "@/app/fonts";
 import { notifyRedraw } from "@/lib/images";
 import { fontFaces, setFontFamilies } from "@/lib/render/fonts";
@@ -16,6 +16,17 @@ setFontFamilies(canvasFamilies);
 
 export default function Editor() {
   const accent = useEditor((s) => s.brand.accent);
+  // Saved work loads from IndexedDB asynchronously; wait so the sample content doesn't flash first.
+  const hydrated = useSyncExternalStore(
+    (cb) => useEditor.persist.onFinishHydration(cb),
+    () => useEditor.persist.hasHydrated(),
+    () => false,
+  );
+
+  // Ask the browser to keep saved drafts instead of clearing them when space runs low.
+  useEffect(() => {
+    navigator.storage?.persist?.().catch(() => {});
+  }, []);
 
   useEffect(() => {
     document.documentElement.style.setProperty("--color-accent", accent);
@@ -31,14 +42,21 @@ export default function Editor() {
       });
   }, []);
 
+  if (!hydrated) {
+    return <div className="grid min-h-dvh place-items-center text-sm text-muted">Loading your work…</div>;
+  }
+
   return (
-    <div className="grid h-full grid-rows-[auto_minmax(0,1fr)] max-[900px]:h-auto max-[900px]:min-h-full">
+    // Phones: the page scrolls and the preview stays pinned on top while you edit below it.
+    // Tablets and up: fixed-height app with the preview and the panel scrolling separately.
+    <div className="min-h-dvh md:grid md:h-dvh md:grid-rows-[auto_minmax(0,1fr)]">
       <TopBar />
-      <main className="grid min-h-0 grid-cols-[minmax(0,1fr)_400px] max-[900px]:grid-cols-[minmax(0,1fr)]">
-        <section className="flex min-w-0 flex-col items-center gap-3.5 overflow-auto py-[22px] pr-4 pl-[max(16px,env(safe-area-inset-left,0px))] max-[900px]:pr-[max(16px,env(safe-area-inset-right,0px))]">
+      <main className="md:grid md:min-h-0 md:grid-cols-[minmax(0,1fr)_340px] lg:grid-cols-[minmax(0,1fr)_400px]">
+        <section className="sticky top-0 z-10 flex min-w-0 flex-col items-center gap-2 border-b border-line bg-bg px-[max(16px,env(safe-area-inset-left,0px))] pt-3 pb-1 md:static md:gap-3.5 md:overflow-auto md:border-b-0 md:py-[22px]">
           <Preview />
-          <p className="text-center text-[12.5px] text-muted">
-            Drag a photo on the preview to reposition it. Scroll on it to zoom. Paste an image with Ctrl+V.
+          <p className="text-center text-xs text-muted md:text-[12.5px]">
+            <span className="md:hidden">Drag a photo to move it. Pinch to zoom.</span>
+            <span className="hidden md:inline">Drag a photo on the preview to reposition it. Scroll on it to zoom. Paste an image with Ctrl+V.</span>
           </p>
           <SlideStrip />
         </section>

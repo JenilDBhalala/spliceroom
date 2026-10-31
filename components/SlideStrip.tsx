@@ -1,16 +1,15 @@
 import { useEffect, useRef } from "react";
-import { H, W, renderSlide } from "@/lib/render";
-import { useEditor, useSlides } from "@/lib/store";
+import { renderSlide } from "@/lib/render";
+import { useEditor, useRenderState, useSlides } from "@/lib/store";
 import { useRedrawTick } from "@/lib/useRedrawTick";
 
-const THUMB_W = 76;
+const THUMB = "w-14 md:w-[76px]";
 
-const addClass =
-  "h-[95px] w-[76px] flex-none cursor-pointer rounded border-[1.5px] border-dashed border-line bg-transparent p-1.5 text-xs font-semibold text-muted hover:border-accent hover:text-accent";
+const addClass = `${THUMB} flex-none cursor-pointer self-start rounded border-[1.5px] border-dashed border-line bg-transparent p-1 text-[11px] font-semibold leading-tight text-muted hover:border-accent hover:text-accent md:text-xs`;
 
 export default function SlideStrip() {
-  const brand = useEditor((s) => s.brand);
-  const posts = useEditor((s) => s.posts);
+  const state = useRenderState();
+  const { W, H } = state.frame;
   const fmt = useEditor((s) => s.fmt);
   const select = useEditor((s) => s.select);
   const addListItem = useEditor((s) => s.addListItem);
@@ -23,22 +22,27 @@ export default function SlideStrip() {
   // Thumbnails are drawn directly at their device-pixel size, not shrunk from a full render.
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
-      const px = Math.round(THUMB_W * devicePixelRatio);
       slides.forEach((sl, i) => {
         const c = thumbs.current[i];
-        if (!c) return;
-        if (c.width !== px) {
+        if (!c || !c.clientWidth) return;
+        const px = Math.round(c.clientWidth * devicePixelRatio);
+        const ph = Math.round((px * H) / W);
+        if (c.width !== px || c.height !== ph) {
           c.width = px;
-          c.height = Math.round((px * H) / W);
+          c.height = ph;
         }
-        renderSlide(c.getContext("2d")!, { brand, posts }, sl, px / W);
+        renderSlide(c.getContext("2d")!, state, sl, px / W);
       });
     });
     return () => cancelAnimationFrame(raf);
-  }, [brand, posts, slides, tick]);
+  }, [state, slides, tick, W, H]);
+
+  // One-slide templates with nothing to add need no strip.
+  const canAdd = fmt === "list" || fmt === "news" || fmt === "lessons";
+  if (slides.length === 1 && !canAdd) return null;
 
   return (
-    <div className="flex max-w-full gap-2.5 overflow-x-auto px-1 pt-1 pb-2">
+    <div className="flex max-w-full gap-2 overflow-x-auto px-1 pt-1 pb-2 md:gap-2.5">
       {slides.map((sl, i) => (
         <button
           key={i}
@@ -52,23 +56,24 @@ export default function SlideStrip() {
             ref={(el) => {
               thumbs.current[i] = el;
             }}
-            className="block h-[95px] w-[76px] rounded bg-black outline-offset-2 group-aria-[current=true]:outline-2 group-aria-[current=true]:outline-accent"
+            style={{ aspectRatio: `${W} / ${H}` }}
+            className={`${THUMB} block rounded bg-black outline-offset-2 group-aria-[current=true]:outline-2 group-aria-[current=true]:outline-accent`}
           />
-          <span className="text-[11px] text-muted tabular-nums">{`${i + 1}. ${sl.label}`}</span>
+          <span className={`${THUMB} truncate text-center text-[11px] text-muted tabular-nums`}>{`${i + 1}. ${sl.label}`}</span>
         </button>
       ))}
       {fmt === "list" && (
-        <button type="button" className={addClass} onClick={addListItem}>
+        <button type="button" className={addClass} style={{ aspectRatio: `${W} / ${H}` }} onClick={addListItem}>
           + Add movie
         </button>
       )}
       {fmt === "news" && (
-        <button type="button" className={addClass} onClick={addStory}>
+        <button type="button" className={addClass} style={{ aspectRatio: `${W} / ${H}` }} onClick={addStory}>
           + Add story slide
         </button>
       )}
       {fmt === "lessons" && (
-        <button type="button" className={addClass} onClick={addLesson}>
+        <button type="button" className={addClass} style={{ aspectRatio: `${W} / ${H}` }} onClick={addLesson}>
           + Add lesson
         </button>
       )}

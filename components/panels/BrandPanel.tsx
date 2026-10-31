@@ -8,8 +8,8 @@ import Toggle from "@/components/fields/Toggle";
 import { Group, Note, PanelHeader, Row } from "./ui";
 
 const EXPORT_SIZES = [
-  [2, "2160 × 2700 (sharper)"],
-  [1, "1080 × 1350 (Instagram size)"],
+  [2, "Sharper (2× size)"],
+  [1, "Instagram size (1080 wide)"],
 ] as const;
 
 export default function BrandPanel() {
@@ -53,7 +53,7 @@ export default function BrandPanel() {
           options={EXPORT_SIZES}
           onChange={(exportScale) => set({ exportScale })}
         />
-        <Note>Both are 4:5. The sharper size stays crisp when zoomed in; Instagram scales it down on upload.</Note>
+        <Note>The post shape (4:5, 1:1, 9:16) is set at the top. The sharper size stays crisp when zoomed in; Instagram scales it down on upload.</Note>
       </Group>
     </>
   );

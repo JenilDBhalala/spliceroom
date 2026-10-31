@@ -1,10 +1,15 @@
-import type { Framing, ImageSlot } from "@/types/post";
+import type { Brand, FontKey, Frame, Framing, ImageSlot, PostSize, TextStyle } from "@/types/post";
 import { imageFor } from "@/lib/images";
 import { F } from "./fonts";
 import { placeholderImage } from "./placeholder";
 
+/** Slides are always laid out 1080 units wide; the height depends on the post size. */
 export const W = 1080;
-export const H = 1350;
+export const FRAMES: Record<PostSize, Frame> = {
+  portrait: { W, H: 1350 },
+  square: { W, H: 1080 },
+  story: { W, H: 1920 },
+};
 
 export type Ctx = CanvasRenderingContext2D;
 export type Drawable = HTMLImageElement | HTMLCanvasElement;
@@ -14,6 +19,39 @@ export const archivo = (weight: number, size: number) => `${weight} ${size}px ${
 export const anton = (size: number) => `400 ${size}px ${F.anton}, Impact, sans-serif`;
 export const bebas = (size: number) => `400 ${size}px ${F.bebas}, Impact, sans-serif`;
 export const cinzel = (size: number) => `700 ${size}px ${F.cinzel}, Georgia, serif`;
+export const playfair = (size: number) => `700 ${size}px ${F.playfair}, Georgia, serif`;
+
+/** Canvas font string for a selectable font at its display weight. */
+export function fontFace(font: FontKey, size: number) {
+  switch (font) {
+    case "Anton":
+      return anton(size);
+    case "Bebas Neue":
+      return bebas(size);
+    case "Cinzel":
+      return cinzel(size);
+    case "Playfair Display":
+      return playfair(size);
+    case "Archivo":
+      return archivo(600, size);
+    default:
+      return montserrat(900, size);
+  }
+}
+
+/* ---------- template text style ---------- */
+
+export const accentOf = (brand: Brand, style: TextStyle) => style.accent ?? brand.accent;
+
+/**
+ * Fits `text` using the template style: its font, caps setting and size multiplier.
+ * Cinzel gets letter spacing; call inside ctx.save()/restore() since it sets ctx.letterSpacing.
+ */
+export function fitStyled(ctx: Ctx, text: string, style: TextStyle, maxW: number, maxH: number, lh: number, maxS: number, minS = 20) {
+  ctx.letterSpacing = style.font === "Cinzel" ? `${Math.round(maxS / 15)}px` : "0px";
+  const k = style.scale || 1;
+  return fitText(ctx, toks(text, style.caps), (s) => fontFace(style.font, s), maxW, maxH, lh, Math.round(maxS * k), Math.round(minS * k));
+}
 
 /** The slot's uploaded image, else its placeholder still, else nothing. */
 export function imageOf(s: ImageSlot): Drawable | null {
@@ -60,7 +98,7 @@ export function drawContain(ctx: Ctx, im: Drawable, cx: number, cy: number, mw: 
   return { w, h };
 }
 
-export function fadeBottom(ctx: Ctx, y0: number, y1: number) {
+export function fadeBottom(ctx: Ctx, { W, H }: Frame, y0: number, y1: number) {
   const g = ctx.createLinearGradient(0, y0, 0, y1);
   g.addColorStop(0, "rgba(0,0,0,0)");
   g.addColorStop(0.45, "rgba(0,0,0,.55)");
@@ -208,6 +246,41 @@ export function drawLines(
       x += wd.w;
     });
   });
+}
+
+/** Instagram-style blue verified badge centered on (x, y); `s` scales the 25px-radius original. */
+export function verifiedBadge(ctx: Ctx, x: number, y: number, s = 1) {
+  ctx.fillStyle = "#3897f0";
+  ctx.beginPath();
+  for (let k = 0; k < 24; k++) {
+    const a = (k / 24) * Math.PI * 2;
+    const rr = (k % 2 ? 21 : 25) * s;
+    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 5 * s;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(x - 9 * s, y + 1 * s);
+  ctx.lineTo(x - 2 * s, y + 8 * s);
+  ctx.lineTo(x + 10 * s, y - 7 * s);
+  ctx.stroke();
+}
+
+/** Circle-clipped photo (avatar), or nothing if the slot is empty. */
+export function drawAvatar(ctx: Ctx, slot: ImageSlot, cx: number, cy: number, r: number, fallback: string) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = fallback;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  const im = uploaded(slot);
+  if (im) drawCover(ctx, im, slot, cx - r, cy - r, r * 2, r * 2);
+  ctx.restore();
 }
 
 export function swipeTag(ctx: Ctx, accent: string, text: string, x: number, y: number) {

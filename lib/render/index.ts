@@ -5,14 +5,30 @@ import { listCover, listItem } from "./list";
 import { newsCover, newsStory } from "./news";
 import { lessonItem, lessonsCover } from "./lessons";
 import { timeline } from "./timeline";
+import { poster } from "./poster";
+import { meme } from "./meme";
+import { tweet } from "./tweet";
+import { quote } from "./quote";
+import { compare } from "./compare";
 import { follow } from "./follow";
 
-export { W, H } from "./helpers";
+export { W, FRAMES } from "./helpers";
 
 type Renderer = (ctx: Ctx, state: RenderState, slide: Slide) => Region[];
 
 const RENDERERS: Record<SlideKind, Renderer> = {
-  hlCover, hlClean, listCover, listItem, newsCover, newsStory, lessonsCover, lessonItem, timeline, follow,
+  hlCover, hlClean, listCover, listItem, newsCover, newsStory, lessonsCover, lessonItem, timeline, poster, meme, tweet, quote, compare,
+  follow,
+};
+
+/** Single-slide templates: slide kind and strip label. */
+const SINGLE: Partial<Record<FormatId, Slide>> = {
+  timeline: { kind: "timeline", label: "Timeline" },
+  poster: { kind: "poster", label: "Poster" },
+  meme: { kind: "meme", label: "Meme" },
+  tweet: { kind: "tweet", label: "Post" },
+  quote: { kind: "quote", label: "Quote" },
+  compare: { kind: "compare", label: "Comparison" },
 };
 
 export function slidesFor(fmt: FormatId, posts: Posts): Slide[] {
@@ -43,13 +59,14 @@ export function slidesFor(fmt: FormatId, posts: Posts): Slide[] {
       ...(p.follow ? [{ kind: "follow", label: "Follow" } as Slide] : []),
     ];
   }
-  if (fmt === "timeline") return [{ kind: "timeline", label: "Timeline" }];
+  const single = SINGLE[fmt];
+  if (single) return [single];
   return [{ kind: "follow", label: "Follow card" }];
 }
 
 /**
- * Draws one slide and returns its draggable photo regions (in 1080×1350 units).
- * `scale` maps the 1080×1350 layout onto the canvas: a 2160px-wide canvas uses 2,
+ * Draws one slide and returns its draggable photo regions (in layout units, 1080 wide).
+ * `scale` maps the layout onto the canvas: a 2160px-wide canvas uses 2,
  * so text and shapes are drawn at full resolution instead of being stretched.
  */
 export function renderSlide(ctx: Ctx, state: RenderState, slide: Slide, scale = 1): Region[] {
@@ -60,7 +77,7 @@ export function renderSlide(ctx: Ctx, state: RenderState, slide: Slide, scale = 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, 1080, 1350);
+  ctx.fillRect(0, 0, state.frame.W, state.frame.H);
   ctx.textBaseline = "alphabetic";
   let regs: Region[] = [];
   try {

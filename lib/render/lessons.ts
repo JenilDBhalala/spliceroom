@@ -1,14 +1,16 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import { brandMark } from "./headline";
 import {
-  H, W, type Ctx, type Wrapped, anton, archivo, blockH, drawCover, drawLines, fadeBottom, fitText, imageOf, montserrat, shadowOff,
-  shadowOn, swipeTag, toks, uploaded, wrap,
+  type Ctx, type Wrapped, accentOf, anton, archivo, blockH, drawCover, drawLines, fadeBottom, fitStyled, fitText, imageOf, montserrat,
+  shadowOff, shadowOn, swipeTag, toks, uploaded, wrap,
 } from "./helpers";
 
-export function lessonsCover(ctx: Ctx, { brand, posts }: RenderState): Region[] {
+export function lessonsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
+  const { W, H } = frame;
   const p = posts.lessons;
+  const accent = accentOf(brand, p.style);
   drawCover(ctx, imageOf(p.img), p.img, 0, 0, W, H);
-  fadeBottom(ctx, H * 0.42, H * 0.7);
+  fadeBottom(ctx, frame, H * 0.42, H * 0.7);
   if (p.brandLogo) brandMark(ctx, brand);
 
   // Title (logo PNG or text) sits on the bottom edge; the kicker line goes above it.
@@ -25,9 +27,11 @@ export function lessonsCover(ctx: Ctx, { brand, posts }: RenderState): Region[] 
     shadowOff(ctx);
   } else {
     const lh = 1.0;
-    const fit = fitText(ctx, toks(p.title), (s) => montserrat(900, s), W - 120, H * 0.24, lh, 150, 44);
+    ctx.save();
+    const fit = fitStyled(ctx, p.title, p.style, W - 120, H * 0.24, lh, 150, 44);
     titleTop = titleBottom - blockH(fit.lines.length, fit.size, lh);
-    drawLines(ctx, fit, W / 2, titleTop, lh, "#fff", brand.accent);
+    drawLines(ctx, fit, W / 2, titleTop, lh, p.style.color, accent);
+    ctx.restore();
   }
 
   if (p.kicker.trim()) {
@@ -36,16 +40,18 @@ export function lessonsCover(ctx: Ctx, { brand, posts }: RenderState): Region[] 
     const lh = 1.2;
     const fit = fitText(ctx, toks(p.kicker), (s) => montserrat(800, s), W - 160, 120, lh, 44, 24);
     const kh = blockH(fit.lines.length, fit.size, lh);
-    drawLines(ctx, fit, W / 2, titleTop - 38 - kh, lh, brand.accent, "#fff");
+    drawLines(ctx, fit, W / 2, titleTop - 38 - kh, lh, accent, p.style.color);
     ctx.restore();
   }
 
-  if (p.swipe) swipeTag(ctx, brand.accent, "SWIPE", W - 70, H - 50);
+  if (p.swipe) swipeTag(ctx, accent, "SWIPE", W - 70, H - 50);
   return [{ x: 0, y: 0, w: W, h: H, path: ["posts", "lessons", "img"] }];
 }
 
-export function lessonItem(ctx: Ctx, { brand, posts }: RenderState, sl: Slide): Region[] {
+export function lessonItem(ctx: Ctx, { brand, posts, frame }: RenderState, sl: Slide): Region[] {
+  const { W, H } = frame;
   const p = posts.lessons;
+  const accent = accentOf(brand, p.style);
   const i = sl.i!;
   const ls = p.lessons[i];
   const photoH = H * 0.62;
@@ -55,7 +61,7 @@ export function lessonItem(ctx: Ctx, { brand, posts }: RenderState, sl: Slide): 
   drawCover(ctx, imageOf(ls.img), ls.img, 0, 0, W, photoH);
   ctx.fillStyle = "#000";
   ctx.fillRect(0, photoH, W, H - photoH);
-  fadeBottom(ctx, H * 0.4, photoH);
+  fadeBottom(ctx, frame, H * 0.4, photoH);
 
   // Accent number overlapping the bottom of the photo.
   let y = photoH - 20;
@@ -65,7 +71,7 @@ export function lessonItem(ctx: Ctx, { brand, posts }: RenderState, sl: Slide): 
     shadowOn(ctx, 20);
     ctx.font = anton(size);
     ctx.textAlign = "left";
-    ctx.fillStyle = brand.accent;
+    ctx.fillStyle = accent;
     ctx.fillText(String(i + 1).padStart(2, "0"), left - 4 * (size / 170), baseline);
     shadowOff(ctx);
     y = baseline + 40;
@@ -74,18 +80,20 @@ export function lessonItem(ctx: Ctx, { brand, posts }: RenderState, sl: Slide): 
   // Lesson title, then the body text in the space left above the footer.
   const footerY = H - 56;
   const tlh = 1.04;
-  const title = fitText(ctx, toks(ls.title), (s) => montserrat(900, s), maxW, 180, tlh, 76, 36);
-  drawLines(ctx, title, left, y, tlh, "#fff", brand.accent, "left");
+  ctx.save();
+  const title = fitStyled(ctx, ls.title, p.style, maxW, 180, tlh, 76, 36);
+  drawLines(ctx, title, left, y, tlh, p.style.color, accent, "left");
+  ctx.restore();
   y += blockH(title.lines.length, title.size, tlh) + 30;
 
   const blh = 1.34;
   const paras = (ls.text || "").split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
-  drawBody(ctx, paras, left, y, maxW, footerY - 50 - y, blh, brand.accent);
+  drawBody(ctx, paras, left, y, maxW, footerY - 50 - y, blh, accent);
 
   // Footer: page name left, progress right.
   ctx.font = montserrat(900, 30);
   ctx.textAlign = "left";
-  ctx.fillStyle = brand.accent;
+  ctx.fillStyle = accent;
   ctx.fillText((brand.name || "").toLowerCase(), left, footerY);
   ctx.font = montserrat(800, 26);
   ctx.textAlign = "right";

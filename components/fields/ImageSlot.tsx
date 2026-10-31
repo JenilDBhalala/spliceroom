@@ -15,7 +15,7 @@ interface Props {
 }
 
 /** An image box that takes a click, a drop or Ctrl+V (after it was touched). */
-export default function ImageSlot({ label, path, framingPath, contain, tip = "Click, drop or paste an image", empty }: Props) {
+export default function ImageSlot({ label, path, framingPath, contain, tip = "Tap to add a photo, or drop or paste one", empty }: Props) {
   const slot = useEditor((s) => getIn<Slot>(s, path));
   const framing = useEditor((s) => getIn<Framing>(s, framingPath ?? path));
   const update = useEditor((s) => s.update);

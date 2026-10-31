@@ -1,13 +1,16 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import {
-  H, W, type Ctx, type Wrapped, blockH, drawCover, drawLines, fadeBottom, imageOf, montserrat, shadowOff, shadowOn, swipeTag, toks, wrap,
+  type Ctx, type Wrapped, accentOf, blockH, drawCover, drawLines, fadeBottom, fontFace, imageOf, montserrat, shadowOff, shadowOn, swipeTag, toks,
+  wrap,
 } from "./helpers";
 
-export function newsCover(ctx: Ctx, { brand, posts }: RenderState): Region[] {
+export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
+  const { W, H } = frame;
   const p = posts.news;
+  const st = p.style;
   const regs: Region[] = [{ x: 0, y: 0, w: W, h: H, path: ["posts", "news", "img"] }];
   drawCover(ctx, imageOf(p.img), p.img, 0, 0, W, H);
-  fadeBottom(ctx, H * 0.52, H * 0.8);
+  fadeBottom(ctx, frame, H * 0.52, H * 0.8);
   if (p.insetOn) {
     const cx = 220;
     const cy = 220;
@@ -27,8 +30,8 @@ export function newsCover(ctx: Ctx, { brand, posts }: RenderState): Region[] {
     regs.push({ x: cx - r, y: cy - r, w: r * 2, h: r * 2, path: ["posts", "news", "inset"] });
   }
   // each line is sized to fill the full width
-  let lines = (p.text || "")
-    .toUpperCase()
+  let lines = (st.caps ? (p.text || "").toUpperCase() : p.text || "")
+    .replace(/\*/g, "")
     .split("\n")
     .map((s) => s.trim())
     .filter(Boolean);
@@ -46,8 +49,12 @@ export function newsCover(ctx: Ctx, { brand, posts }: RenderState): Region[] {
   }
   const maxW = W - 150;
   const gap = 16;
-  ctx.font = montserrat(900, 100);
-  let sizes = lines.map((l) => Math.min(210, (100 * maxW) / Math.max(1, ctx.measureText(l).width)));
+  ctx.save();
+  if (st.font === "Cinzel") ctx.letterSpacing = "6px";
+  ctx.font = fontFace(st.font, 100);
+  // A size multiplier below 1 shrinks lines; above 1 is capped so lines never run off the slide.
+  const k = Math.min(st.scale || 1, (W - 60) / maxW);
+  let sizes = lines.map((l) => Math.min(210, (100 * maxW) / Math.max(1, ctx.measureText(l).width)) * k);
   let total = sizes.reduce((a, s) => a + s * 0.73, 0) + gap * (lines.length - 1);
   const maxH = H * 0.4;
   if (total > maxH) {
@@ -56,25 +63,27 @@ export function newsCover(ctx: Ctx, { brand, posts }: RenderState): Region[] {
     total = maxH;
   }
   let y = H - 105 - total;
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = st.color;
   ctx.textAlign = "center";
   lines.forEach((l, i) => {
-    ctx.font = montserrat(900, sizes[i]);
+    ctx.font = fontFace(st.font, sizes[i]);
     y += sizes[i] * 0.73;
     ctx.fillText(l, W / 2, y);
     y += gap;
   });
-  if (p.swipe) swipeTag(ctx, brand.accent, "SWIPE", W - 70, H - 42);
+  ctx.restore();
+  if (p.swipe) swipeTag(ctx, accentOf(brand, st), "SWIPE", W - 70, H - 42);
   return regs;
 }
 
-export function newsStory(ctx: Ctx, { brand, posts }: RenderState, sl: Slide): Region[] {
+export function newsStory(ctx: Ctx, { brand, posts, frame }: RenderState, sl: Slide): Region[] {
+  const { W, H } = frame;
   const i = sl.i!;
   const st = posts.news.stories[i];
   drawCover(ctx, imageOf(st.img), st.img, 0, 0, W, H * 0.74);
   ctx.fillStyle = "#000";
   ctx.fillRect(0, H * 0.74, W, H);
-  fadeBottom(ctx, H * 0.56, H * 0.72);
+  fadeBottom(ctx, frame, H * 0.56, H * 0.72);
   const paras = (st.text || "")
     .split(/\n\s*\n/)
     .map((s) => s.trim())
@@ -97,7 +106,7 @@ export function newsStory(ctx: Ctx, { brand, posts }: RenderState, sl: Slide): R
   // Like the reference, an overflowing text ends the loop one step below the minimum.
   let y = H * 0.735 + (maxH - totalH()) / 2 + 10;
   fits.forEach((f) => {
-    drawLines(ctx, f, W / 2, y, lh, "#fff", brand.accent);
+    drawLines(ctx, f, W / 2, y, lh, "#fff", accentOf(brand, posts.news.style));
     y += blockH(f.lines.length, size, lh) + size * 0.95;
   });
   return [{ x: 0, y: 0, w: W, h: H * 0.74, path: ["posts", "news", "stories", i, "img"] }];

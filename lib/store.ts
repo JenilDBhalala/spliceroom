@@ -2,16 +2,18 @@ import { useMemo } from "react";
 import { create } from "zustand";
 import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
 import type {
-  Brand, FormatId, Framing, ImageSlot, Lesson, ListItem, Posts, SlotPath, Story, TimelineRow,
+  Brand, FormatId, Framing, ImageSlot, Lesson, ListItem, PostSize, Posts, RenderState, SlotPath, Story, TextStyle, TimelineRow,
 } from "@/types/post";
+import { idbDel, idbGet, idbSet } from "@/lib/db";
 import { readImageFile } from "@/lib/images";
-import { slidesFor } from "@/lib/render";
+import { FRAMES, slidesFor } from "@/lib/render";
 
 /* ---------- slot factories ---------- */
 
 let phSeed = 0;
 let uid = 0;
-const nextId = () => `n${uid++}`;
+// Time-based so ids stay unique next to items restored from an earlier visit.
+const nextId = () => `${Date.now().toString(36)}-${uid++}`;
 
 export const slot = (label: string, opts: { noPH?: boolean } = {}): ImageSlot => ({
   src: null,
@@ -47,8 +49,33 @@ const defaultBrand = (): Brand => ({
   exportScale: 2,
 });
 
+/* ---------- text styles ---------- */
+
+const style = (font: TextStyle["font"], color = "#ffffff", caps = true): TextStyle => ({ font, color, accent: null, scale: 1, caps });
+
+/** Each template's starting style; "Reset style" goes back to these. */
+export const DEFAULT_STYLES: Record<keyof Posts, TextStyle> = {
+  headline: style("Montserrat"),
+  list: style("Montserrat"),
+  news: style("Montserrat"),
+  lessons: style("Montserrat"),
+  timeline: style("Cinzel", "#f1e4c4"),
+  poster: style("Bebas Neue"),
+  meme: style("Anton"),
+  tweet: style("Archivo", "#e7e9ea", false),
+  quote: style("Playfair Display", "#ffffff", false),
+  compare: style("Montserrat"),
+  follow: style("Anton"),
+};
+const CAPTION_TEXT = { light: "#111111", dark: "#ffffff" } as const;
+const captionStyle = (bar: "light" | "dark") => style("Archivo", CAPTION_TEXT[bar], false);
+const TWEET_LIGHT = { color: "#0f1419", background: "#ffffff" };
+const TWEET_DARK = { color: "#e7e9ea", background: "#000000" };
+const sameStyle = (a: TextStyle, b: TextStyle) => (Object.keys(a) as (keyof TextStyle)[]).every((k) => a[k] === b[k]);
+
 const defaultPosts = (): Posts => ({
   headline: {
+    style: DEFAULT_STYLES.headline,
     img: slot("photo"),
     cleanAdj: { zoom: 1, ox: 0, oy: 0 },
     text: "David Fincher hid a Starbucks cup in *almost every scene* of Fight Club.",
@@ -57,6 +84,7 @@ const defaultPosts = (): Posts => ({
     clean: true,
   },
   list: {
+    style: DEFAULT_STYLES.list,
     panels: [slot("panel 1"), slot("panel 2"), slot("panel 3")],
     panelCount: 3,
     text: "Every major video game adaptation",
@@ -69,6 +97,7 @@ const defaultPosts = (): Posts => ({
     ],
   },
   news: {
+    style: DEFAULT_STYLES.news,
     img: slot("cover photo"),
     inset: slot("inset photo"),
     insetOn: true,
@@ -81,6 +110,7 @@ const defaultPosts = (): Posts => ({
     ],
   },
   timeline: {
+    style: DEFAULT_STYLES.timeline,
     rows: [
       row("row 1", "The Mummy", "1999"),
       row("row 2", "The Mummy Returns", "2001"),
@@ -90,6 +120,7 @@ const defaultPosts = (): Posts => ({
   },
   // After timeline so earlier formats keep the reference's placeholder seeds.
   lessons: {
+    style: DEFAULT_STYLES.lessons,
     img: slot("cover photo"),
     logo: logoSlot(),
     kicker: "Lessons I learned from",
@@ -105,6 +136,62 @@ const defaultPosts = (): Posts => ({
       lesson("lesson 4", "Find your own voice", "The longer you wait to *think for yourself*, the harder it gets. Do not let the crowd choose your path."),
     ],
   },
+  poster: {
+    style: DEFAULT_STYLES.poster,
+    img: slot("poster photo"),
+    logo: logoSlot(),
+    top: "Robin Williams",
+    tagline: "He was their inspiration. He made their lives *extraordinary*.",
+    title: "Dead Poets Society",
+    date: "In cinemas June 2",
+    credits:
+      "Touchstone Pictures presents in association with Silver Screen Partners IV a Steven Haft production a Peter Weir film Robin Williams Dead Poets Society written by Tom Schulman directed by Peter Weir",
+  },
+  meme: {
+    style: DEFAULT_STYLES.meme,
+    mode: "classic",
+    bar: "light",
+    img: slot("meme photo"),
+    top: "When the trailer",
+    bottom: "shows the *whole movie*",
+    caption: "Me explaining the ending of Inception to people who did not ask",
+    watermark: true,
+  },
+  tweet: {
+    style: DEFAULT_STYLES.tweet,
+    theme: "dark",
+    background: TWEET_DARK.background,
+    useBrand: true,
+    name: "Movie Buff",
+    handle: "moviebuff",
+    avatar: slot("avatar", { noPH: true }),
+    verified: false,
+    text: "Dead Poets Society came out in 1989 and it still teaches more about life than *most of school did*.",
+    img: slot("post image"),
+    showImage: true,
+    date: "9:41 AM · Oct 31, 2026",
+  },
+  quote: {
+    style: DEFAULT_STYLES.quote,
+    img: slot("quote photo"),
+    usePhoto: true,
+    background: "#111311",
+    quote: "No matter what anybody tells you, *words and ideas* can change the world.",
+    author: "John Keating",
+    source: "Dead Poets Society (1989)",
+    watermark: true,
+  },
+  compare: {
+    style: DEFAULT_STYLES.compare,
+    layout: "side",
+    headline: "Which one is *better*?",
+    left: slot("left photo"),
+    right: slot("right photo"),
+    leftLabel: "Original",
+    rightLabel: "Remake",
+    vs: true,
+  },
+  follow: { style: DEFAULT_STYLES.follow },
 });
 
 /* ---------- immutable path helpers ---------- */
@@ -135,6 +222,7 @@ export interface EditorState {
   brand: Brand;
   posts: Posts;
   fmt: FormatId;
+  size: PostSize;
   sel: number;
   mode: "slide" | "brand";
   /** Image box the user last touched; Ctrl+V pastes into it. */
@@ -146,6 +234,16 @@ export interface EditorState {
   setImage: (path: SlotPath, src: string | null) => void;
   resetFraming: (path: SlotPath) => void;
   setFmt: (fmt: FormatId) => void;
+  setSize: (size: PostSize) => void;
+  resetStyle: (key: keyof Posts) => void;
+  /** Put a template back to its sample content (text, photos and style). */
+  resetTemplate: (key: keyof Posts) => void;
+  /** Switch meme layout; a still-default text style follows the layout's default. */
+  setMemeMode: (mode: "classic" | "caption") => void;
+  /** Switch caption bar color; a still-default text color follows it. */
+  setMemeBar: (bar: "light" | "dark") => void;
+  /** Switch tweet theme; text color and background follow if they were the other theme's defaults. */
+  setTweetTheme: (theme: "dark" | "light") => void;
   select: (i: number) => void;
   setMode: (mode: "slide" | "brand") => void;
   setActiveSlot: (path: SlotPath | null) => void;
@@ -162,41 +260,88 @@ export interface EditorState {
   removeTimelineRow: (i: number) => void;
 }
 
-const BRAND_FIELDS = ["name", "accent", "display", "verified", "posts", "followers", "following", "bio", "link", "cta", "exportScale"] as const;
-type PersistedBrand = Pick<Brand, (typeof BRAND_FIELDS)[number]> & { logo: string | null; avatar: string | null };
-type Persisted = { brand: PersistedBrand };
+/* ---------- saving ---------- */
 
-// localStorage writes are debounced; images are dropped if they exceed the quota.
+// Everything you make is saved on this device in IndexedDB (photos included) and restored on the next visit.
+const DRAFT_KEY = "editor";
+const LEGACY_KEY = "spliceroom.brand.v1"; // brand-only localStorage save from before drafts
+
+type Persisted = { brand: Brand; posts: Posts; size: PostSize; fmt: FormatId };
+/** Old localStorage shape: brand text fields with logo/avatar as plain data URLs. */
+type LegacyBrand = Partial<Omit<Brand, "logo" | "avatar">> & { logo?: string | ImageSlot | null; avatar?: string | ImageSlot | null };
+
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
-const brandStorage: PersistStorage<Persisted> = {
-  getItem: (name) => {
+let pending: StorageValue<Persisted> | null = null;
+let warned = false;
+
+async function flushSave() {
+  clearTimeout(saveTimer);
+  const value = pending;
+  pending = null;
+  if (!value) return;
+  try {
+    await idbSet(DRAFT_KEY, value);
     try {
-      const raw = localStorage.getItem(name);
+      localStorage.removeItem(LEGACY_KEY);
+    } catch {}
+  } catch {
+    if (!warned) useEditor.getState().showToast("Couldn't save on this device (private browsing?). Download your post before leaving.");
+    warned = true;
+  }
+}
+
+// Writes are debounced while typing or dragging, and flushed when the tab is hidden or closed.
+const draftStorage: PersistStorage<Persisted> = {
+  getItem: async () => {
+    try {
+      const saved = await idbGet<StorageValue<Persisted>>(DRAFT_KEY);
+      if (saved) return saved;
+    } catch {}
+    try {
+      const raw = localStorage.getItem(LEGACY_KEY);
       return raw ? (JSON.parse(raw) as StorageValue<Persisted>) : null;
     } catch {
       return null;
     }
   },
-  setItem: (name, value) => {
+  setItem: (_name, value) => {
+    pending = value;
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try {
-        localStorage.setItem(name, JSON.stringify(value));
-      } catch {
-        try {
-          const b = value.state.brand;
-          localStorage.setItem(name, JSON.stringify({ ...value, state: { brand: { ...b, logo: null, avatar: null } } }));
-          useEditor.getState().showToast("Logo images are too large to remember. Text settings were saved.");
-        } catch {}
-      }
-    }, 400);
+    saveTimer = setTimeout(flushSave, 500);
   },
-  removeItem: (name) => {
-    try {
-      localStorage.removeItem(name);
-    } catch {}
-  },
+  removeItem: () => idbDel(DRAFT_KEY).catch(() => {}),
 };
+
+if (typeof window !== "undefined") {
+  addEventListener("pagehide", () => void flushSave());
+  document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && void flushSave());
+}
+
+const asSlot = (v: LegacyBrand["logo"], fallback: ImageSlot): ImageSlot =>
+  typeof v === "string" ? { ...fallback, src: v } : v && typeof v === "object" ? { ...fallback, ...v } : fallback;
+
+/** Saved data laid over today's defaults, so fields and templates added later get their defaults. */
+function mergeSaved(saved: Partial<Persisted> & { brand?: LegacyBrand }, current: EditorState): EditorState {
+  const brand: Brand = { ...current.brand };
+  if (saved.brand) {
+    const { logo, avatar, ...rest } = saved.brand;
+    Object.assign(brand, rest);
+    brand.logo = asSlot(logo, current.brand.logo);
+    brand.avatar = asSlot(avatar, current.brand.avatar);
+  }
+  const posts = { ...current.posts };
+  if (saved.posts) {
+    for (const k of Object.keys(current.posts) as (keyof Posts)[]) {
+      const sp = saved.posts[k];
+      if (!sp) continue;
+      const base = current.posts[k];
+      (posts as Record<string, unknown>)[k] = { ...base, ...sp, style: { ...base.style, ...sp.style } };
+    }
+  }
+  const size = saved.size && saved.size in FRAMES ? saved.size : current.size;
+  const fmt = saved.fmt && saved.fmt in current.posts ? saved.fmt : current.fmt;
+  return { ...current, brand, posts, size, fmt };
+}
 
 export const useEditor = create<EditorState>()(
   persist(
@@ -204,6 +349,7 @@ export const useEditor = create<EditorState>()(
       brand: defaultBrand(),
       posts: defaultPosts(),
       fmt: "headline",
+      size: "portrait",
       sel: 0,
       mode: "slide",
       activeSlot: null,
@@ -216,7 +362,36 @@ export const useEditor = create<EditorState>()(
       },
       setImage: (path, src) => get().update(path, { src, zoom: 1, ox: 0, oy: 0 }),
       resetFraming: (path) => get().update(path, { zoom: 1, ox: 0, oy: 0 } satisfies Framing),
-      setFmt: (fmt) => set({ fmt, sel: 0, mode: "slide" }),
+      setFmt: (fmt) => set({ fmt, sel: 0, mode: "slide", activeSlot: null }),
+      setSize: (size) => set({ size }),
+      resetStyle: (key) => {
+        const meme = get().posts.meme;
+        get().update(["posts", key], { style: key === "meme" && meme.mode === "caption" ? captionStyle(meme.bar) : DEFAULT_STYLES[key] });
+      },
+      resetTemplate: (key) => {
+        get().update(["posts"], { [key]: defaultPosts()[key] });
+        set({ sel: 0, activeSlot: null });
+      },
+      setMemeMode: (mode) => {
+        const cur = get().posts.meme.style;
+        const caption = captionStyle(get().posts.meme.bar);
+        const [from, to] = mode === "caption" ? [DEFAULT_STYLES.meme, caption] : [caption, DEFAULT_STYLES.meme];
+        get().update(["posts", "meme"], { mode, style: sameStyle(cur, from) ? to : cur });
+      },
+      setMemeBar: (bar) => {
+        const st = get().posts.meme.style;
+        const other = bar === "dark" ? "light" : "dark";
+        get().update(["posts", "meme"], { bar, style: st.color === CAPTION_TEXT[other] ? { ...st, color: CAPTION_TEXT[bar] } : st });
+      },
+      setTweetTheme: (theme) => {
+        const p = get().posts.tweet;
+        const [from, to] = theme === "light" ? [TWEET_DARK, TWEET_LIGHT] : [TWEET_LIGHT, TWEET_DARK];
+        get().update(["posts", "tweet"], {
+          theme,
+          background: p.background === from.background ? to.background : p.background,
+          style: p.style.color === from.color ? { ...p.style, color: to.color } : p.style,
+        });
+      },
       select: (sel) => set({ sel, mode: "slide" }),
       setMode: (mode) => set({ mode }),
       setActiveSlot: (activeSlot) => set({ activeSlot }),
@@ -272,22 +447,10 @@ export const useEditor = create<EditorState>()(
       },
     }),
     {
-      name: "spliceroom.brand.v1",
-      storage: brandStorage,
-      partialize: (s): Persisted => {
-        const b = s.brand;
-        const brand = Object.fromEntries(BRAND_FIELDS.map((k) => [k, b[k]])) as Pick<Brand, (typeof BRAND_FIELDS)[number]>;
-        return { brand: { ...brand, logo: b.logo.src, avatar: b.avatar.src } };
-      },
-      merge: (persisted, current) => {
-        const d = (persisted as Persisted | undefined)?.brand;
-        if (!d) return current;
-        const brand = { ...current.brand };
-        for (const k of BRAND_FIELDS) if (d[k] !== undefined) (brand as Record<string, unknown>)[k] = d[k];
-        if (d.logo) brand.logo = { ...brand.logo, src: d.logo };
-        if (d.avatar) brand.avatar = { ...brand.avatar, src: d.avatar };
-        return { ...current, brand };
-      },
+      name: DRAFT_KEY,
+      storage: draftStorage,
+      partialize: (s): Persisted => ({ brand: s.brand, posts: s.posts, size: s.size, fmt: s.fmt }),
+      merge: (persisted, current) => (persisted ? mergeSaved(persisted as Partial<Persisted>, current) : current),
     },
   ),
 );
@@ -302,6 +465,16 @@ export function useSlides() {
   const slides = useMemo(() => slidesFor(fmt, posts), [fmt, posts]);
   return { slides, sel: Math.min(rawSel, slides.length - 1) };
 }
+
+/** Everything a renderer needs: brand, posts and the slide frame for the chosen size. */
+export function useRenderState(): RenderState {
+  const brand = useEditor((s) => s.brand);
+  const posts = useEditor((s) => s.posts);
+  const size = useEditor((s) => s.size);
+  return useMemo(() => ({ brand, posts, frame: FRAMES[size] }), [brand, posts, size]);
+}
+
+export const renderStateOf = (s: EditorState): RenderState => ({ brand: s.brand, posts: s.posts, frame: FRAMES[s.size] });
 
 /** Value of `path.key` plus a setter, for binding form fields. */
 export function useField<T>(path: SlotPath, key: string): [T, (v: T) => void] {
