@@ -71,9 +71,15 @@ export interface TextStyle {
   color: string;
   /** Highlight color for *starred* words; null = the brand theme color. */
   accent: string | null;
-  /** Text size multiplier, 0.7–1.3. */
+  /** Text size multiplier, 0.4–1.3. */
   scale: number;
   caps: boolean;
+  /** Font weight; null = the font's default (usually its boldest look). */
+  weight: number | null;
+  /** Extra letter spacing as a fraction of the font size (0 = normal). */
+  tracking: number;
+  /** Line spacing multiplier (1 = the template's normal spacing). */
+  leading: number;
 }
 
 export interface Brand {
@@ -215,6 +221,10 @@ export interface TweetPost {
   text: string;
   img: ImageSlot;
   showImage: boolean;
+  /** Image shape: auto fits the space; the others set the height from the card width. */
+  imgShape: "auto" | "wide" | "square" | "tall" | "original";
+  /** Show the current local time and date instead of `date`. */
+  autoDate: boolean;
   date: string;
 }
 
@@ -250,6 +260,12 @@ export interface TextLayer {
   font: FontKey;
   /** Font size in layout units (the slide is 1080 wide). */
   size: number;
+  /** Font weight; null = the font's default. */
+  weight: number | null;
+  /** Extra letter spacing as a fraction of the font size. */
+  tracking: number;
+  /** Line spacing multiplier. */
+  leading: number;
   color: string;
   /** Color for *starred* words; null = brand theme color. */
   accent: string | null;

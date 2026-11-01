@@ -24,3 +24,6 @@ export const SITE_URL = new URL(
   process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000"),
 );
+
+/** Google Analytics 4 measurement ID (public). Override with NEXT_PUBLIC_GA_ID; set it to "" to turn analytics off. */
+export const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-6SMGJSW1FE";

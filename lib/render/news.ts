@@ -48,10 +48,11 @@ export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Regio
     if (cur) lines.push(cur);
   }
   const maxW = W - 150;
-  const gap = 16;
+  const gap = 16 * (st.leading ?? 1);
+  const spacing = (size: number) => `${(st.font === "Cinzel" ? 6 : 0) + (st.tracking ?? 0) * size}px`;
   ctx.save();
-  if (st.font === "Cinzel") ctx.letterSpacing = "6px";
-  ctx.font = fontFace(st.font, 100);
+  ctx.letterSpacing = spacing(100);
+  ctx.font = fontFace(st.font, 100, st.weight);
   // A size multiplier below 1 shrinks lines; above 1 is capped so lines never run off the slide.
   const k = Math.min(st.scale || 1, (W - 60) / maxW);
   let sizes = lines.map((l) => Math.min(210, (100 * maxW) / Math.max(1, ctx.measureText(l).width)) * k);
@@ -66,7 +67,8 @@ export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Regio
   ctx.fillStyle = st.color;
   ctx.textAlign = "center";
   lines.forEach((l, i) => {
-    ctx.font = fontFace(st.font, sizes[i]);
+    ctx.letterSpacing = spacing(sizes[i]);
+    ctx.font = fontFace(st.font, sizes[i], st.weight);
     y += sizes[i] * 0.73;
     ctx.fillText(l, W / 2, y);
     y += gap;

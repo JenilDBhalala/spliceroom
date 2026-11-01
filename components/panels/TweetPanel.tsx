@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import type { TweetPost } from "@/types/post";
+import { notifyRedraw } from "@/lib/images";
+import { nowStamp } from "@/lib/render/tweet";
 import { useEditor, useField } from "@/lib/store";
 import ColorField from "@/components/fields/ColorField";
 import ImageSlot from "@/components/fields/ImageSlot";
@@ -8,6 +11,13 @@ import Toggle from "@/components/fields/Toggle";
 import { Group, HIGHLIGHT_TIP, Note, Row } from "./ui";
 
 const P = ["posts", "tweet"] as const;
+const SHAPES = [
+  ["auto", "Auto"],
+  ["wide", "Wide"],
+  ["square", "Square"],
+  ["tall", "Tall"],
+  ["original", "Original"],
+] as const;
 const THEMES = [
   ["dark", "Dark"],
   ["light", "Light"],
@@ -24,13 +34,43 @@ export default function TweetPanel() {
   const [verified, setVerified] = useField<boolean>(P, "verified");
   const [showImage, setShowImage] = useField<boolean>(P, "showImage");
   const [date, setDate] = useField<string>(P, "date");
+  const [autoDate, setAutoDate] = useField<boolean>(P, "autoDate");
+  const [imgShape, setImgShape] = useField<TweetPost["imgShape"]>(P, "imgShape");
   const [background, setBackground] = useField<string>(P, "background");
+  // Keep the clock current: re-render the note and redraw the canvas as minutes pass.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!autoDate) return;
+    const t = setInterval(() => {
+      setTick((n) => n + 1);
+      notifyRedraw();
+    }, 20_000);
+    return () => clearInterval(t);
+  }, [autoDate]);
   return (
     <>
       <TextField label="Post text" area value={text} onChange={setText} tip={HIGHLIGHT_TIP} />
       <Toggle label="Add an image" checked={showImage} onChange={setShowImage} />
-      {showImage && <ImageSlot label="Image" path={[...P, "img"]} />}
-      <TextField label="Time and date" value={date} onChange={setDate} tip="Leave empty to hide it." />
+      {showImage && (
+        <>
+          <ImageSlot label="Image" path={[...P, "img"]} />
+          <Segmented<TweetPost["imgShape"]> label="Image shape" value={imgShape ?? "auto"} options={SHAPES} onChange={setImgShape} />
+        </>
+      )}
+      <Toggle
+        label="Use the current time"
+        checked={autoDate}
+        onChange={(on) => {
+          // Turning it off starts the text field from the time shown now.
+          if (!on) setDate(nowStamp());
+          setAutoDate(on);
+        }}
+      />
+      {autoDate ? (
+        <Note>{`Shows ${nowStamp()} in your own date format, and updates by itself.`}</Note>
+      ) : (
+        <TextField label="Time and date" value={date} onChange={setDate} tip="Leave empty to hide it." />
+      )}
       <Group title="Who posted it">
         <Toggle label="Use my brand profile" checked={useBrand} onChange={setUseBrand} />
         {useBrand ? (

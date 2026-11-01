@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { GA_ID, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import { fontVariables } from "./fonts";
 import "./globals.css";
 
@@ -35,6 +36,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fontVariables} h-full`}>
       <body className="h-full">{children}</body>
+      {/* Production only, so local development doesn't count as visits. */}
+      {GA_ID && process.env.NODE_ENV === "production" && <GoogleAnalytics gaId={GA_ID} />}
     </html>
   );
 }

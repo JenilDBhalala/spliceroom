@@ -4,8 +4,10 @@ import ColorField from "@/components/fields/ColorField";
 import FontPicker from "@/components/fields/FontPicker";
 import ImageSlot from "@/components/fields/ImageSlot";
 import Segmented from "@/components/fields/Segmented";
+import Slider from "@/components/fields/Slider";
 import TextField from "@/components/fields/TextField";
 import Toggle from "@/components/fields/Toggle";
+import TypeControls from "@/components/fields/TypeControls";
 import { Group, HIGHLIGHT_TIP, Note } from "./ui";
 
 const P = ["posts", "custom"] as const;
@@ -111,18 +113,6 @@ function LayerActions({ layer, index, count }: { layer: Layer; index: number; co
   );
 }
 
-function Slider({ label, value, min, max, step, format, onChange }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="flex items-baseline justify-between text-xs font-semibold">
-        {label}
-        <span className="font-normal text-muted tabular-nums">{format(value)}</span>
-      </span>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(+e.target.value)} className="h-8 w-full accent-accent" />
-    </label>
-  );
-}
-
 const ALIGNS = [
   ["left", "Left"],
   ["center", "Center"],
@@ -163,7 +153,8 @@ function TextLayerFields({ layer: l, index }: { layer: TextLayer; index: number 
     <>
       <TextField label="Text" area value={l.text} onChange={(text) => set({ text })} tip={HIGHLIGHT_TIP} />
       <FontPicker label="Font" value={l.font} onChange={(font) => set({ font })} />
-      <Slider label="Size" value={l.size} min={16} max={320} step={2} format={(v) => `${Math.round(v)}`} onChange={(size) => set({ size })} />
+      <TypeControls font={l.font} weight={l.weight} tracking={l.tracking} leading={l.leading} onChange={set} />
+      <Slider label="Size" value={l.size} min={10} max={320} step={2} format={(v) => `${Math.round(v)}`} onChange={(size) => set({ size })} />
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
         <ColorField label="Color" value={l.color} onChange={(color) => set({ color })} />
         <div className="flex flex-col gap-1">

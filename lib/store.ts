@@ -52,7 +52,16 @@ const defaultBrand = (): Brand => ({
 
 /* ---------- text styles ---------- */
 
-const style = (font: TextStyle["font"], color = "#ffffff", caps = true): TextStyle => ({ font, color, accent: null, scale: 1, caps });
+const style = (font: TextStyle["font"], color = "#ffffff", caps = true): TextStyle => ({
+  font,
+  color,
+  accent: null,
+  scale: 1,
+  caps,
+  weight: null,
+  tracking: 0,
+  leading: 1,
+});
 
 /** Each template's starting style; "Reset style" goes back to these. */
 export const DEFAULT_STYLES: Record<StyledKey, TextStyle> = {
@@ -84,6 +93,9 @@ export const textLayer = (o: Partial<TextLayer> = {}): TextLayer => ({
   text: "Your text",
   font: "Anton",
   size: 110,
+  weight: null,
+  tracking: 0,
+  leading: 1,
   color: "#ffffff",
   accent: null,
   align: "center",
@@ -297,6 +309,8 @@ const defaultPosts = (): Posts => ({
     text: "Dead Poets Society came out in 1989 and it still teaches more about life than *most of school did*.",
     img: slot("post image"),
     showImage: true,
+    imgShape: "auto",
+    autoDate: true,
     date: "9:41 AM · Oct 31, 2026",
   },
   quote: {

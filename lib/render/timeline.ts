@@ -1,6 +1,6 @@
 import type { Region, RenderState } from "@/types/post";
 import {
-  type Ctx, blockH, drawContain, drawCover, fitStyled, fontFace, imageOf, montserrat, shadowOff, shadowOn, uploaded,
+  type Ctx, blockH, drawContain, drawCover, fitStyled, leadOf, fontFace, imageOf, montserrat, shadowOff, shadowOn, uploaded,
 } from "./helpers";
 
 export function timeline(ctx: Ctx, { posts, frame }: RenderState): Region[] {
@@ -29,12 +29,12 @@ export function timeline(ctx: Ctx, { posts, frame }: RenderState): Region[] {
     if (logo) {
       drawContain(ctx, logo, 50 + 175, cy, 350, rh * 0.55);
     } else {
-      const lh = 1.0;
+      const lh = leadOf(style, 1.0);
       ctx.save();
       const fit = fitStyled(ctx, r.title, style, 380, rh * 0.55, lh, 64, 20);
       const left = 60;
       fit.lines.forEach((L, li) => {
-        ctx.font = fontFace(style.font, fit.size);
+        ctx.font = fontFace(style.font, fit.size, style.weight);
         ctx.textAlign = "left";
         ctx.fillStyle = style.color;
         ctx.fillText(

@@ -32,10 +32,19 @@ export const accentOf = (brand: Brand, style: TextStyle) => style.accent ?? bran
  * Cinzel gets letter spacing; call inside ctx.save()/restore() since it sets ctx.letterSpacing.
  */
 export function fitStyled(ctx: Ctx, text: string, style: TextStyle, maxW: number, maxH: number, lh: number, maxS: number, minS = 20) {
-  ctx.letterSpacing = style.font === "Cinzel" ? `${Math.round(maxS / 15)}px` : "0px";
+  const base = style.font === "Cinzel" ? Math.round(maxS / 15) : 0;
+  const tracking = style.tracking ?? 0;
   const k = style.scale || 1;
-  return fitText(ctx, toks(text, style.caps), (s) => fontFace(style.font, s), maxW, maxH, lh, Math.round(maxS * k), Math.round(minS * k));
+  // Letter spacing scales with the size being tried, so it's set alongside the font.
+  const font = (s: number) => {
+    ctx.letterSpacing = `${base + tracking * s}px`;
+    return fontFace(style.font, s, style.weight);
+  };
+  return fitText(ctx, toks(text, style.caps), font, maxW, maxH, lh, Math.round(maxS * k), Math.round(minS * k));
 }
+
+/** A template's line height with the style's line-spacing multiplier applied. */
+export const leadOf = (style: TextStyle, lh: number) => lh * (style.leading ?? 1);
 
 /** The slot's uploaded image, else its placeholder still, else nothing. */
 export function imageOf(s: ImageSlot): Drawable | null {

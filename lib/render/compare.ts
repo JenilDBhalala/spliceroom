@@ -1,6 +1,6 @@
 import type { ImageSlot, Region, RenderState } from "@/types/post";
 import {
-  type Ctx, accentOf, anton, blockH, drawCover, drawLines, fitStyled, fitText, imageOf, montserrat, rrect, shadowOff, shadowOn, toks,
+  type Ctx, accentOf, anton, blockH, drawCover, drawLines, fitStyled, leadOf, fitText, imageOf, montserrat, rrect, shadowOff, shadowOn, toks,
 } from "./helpers";
 
 /** Two photos side by side (or stacked) with labels, an optional headline band and a VS badge. */
@@ -13,7 +13,7 @@ export function compare(ctx: Ctx, { brand, posts, frame }: RenderState): Region[
 
   let bandH = 0;
   if (p.headline.trim()) {
-    const lh = 1.05;
+    const lh = leadOf(p.style, 1.05);
     ctx.save();
     const fit = fitStyled(ctx, p.headline, p.style, W - 100, H * 0.16, lh, 96, 34);
     bandH = blockH(fit.lines.length, fit.size, lh) + 88;

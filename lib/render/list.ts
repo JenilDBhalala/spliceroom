@@ -1,6 +1,6 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import {
-  type Ctx, accentOf, anton, blockH, drawContain, drawCover, drawLines, fadeBottom, fitStyled, fitText, fontFace, imageOf, montserrat, rrect,
+  type Ctx, accentOf, anton, blockH, drawContain, drawCover, drawLines, fadeBottom, fitStyled, leadOf, fitText, fontFace, imageOf, montserrat, rrect,
   shadowOff, shadowOn, swipeTag, toks, uploaded,
 } from "./helpers";
 
@@ -21,7 +21,7 @@ export function listCover(ctx: Ctx, { brand, posts, frame }: RenderState): Regio
   }
   fadeBottom(ctx, frame, top - 260, top);
   const accent = accentOf(brand, p.style);
-  const lh = 1.0;
+  const lh = leadOf(p.style, 1.0);
   ctx.save();
   const fit = fitStyled(ctx, p.text, p.style, W - 110, H * 0.36, lh, 150, 40);
   const bottom = H - 120;

@@ -1,6 +1,6 @@
 import type { Region, RenderState } from "@/types/post";
 import {
-  type Ctx, accentOf, archivo, bebas, blockH, drawCover, drawLines, fadeBottom, fitStyled, fitText, imageOf, montserrat, shadowOff, shadowOn,
+  type Ctx, accentOf, archivo, bebas, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, fitText, imageOf, montserrat, shadowOff, shadowOn,
   toks, uploaded,
 } from "./helpers";
 
@@ -59,7 +59,7 @@ export function poster(ctx: Ctx, { brand, posts, frame }: RenderState): Region[]
     y -= h + 34;
   } else if (p.title.trim()) {
     ctx.save();
-    const lh = 0.92;
+    const lh = leadOf(p.style, 0.92);
     const fit = fitStyled(ctx, p.title, p.style, W - 100, H * 0.22, lh, 240, 60);
     const h = blockH(fit.lines.length, fit.size, lh);
     shadowOn(ctx, 24);

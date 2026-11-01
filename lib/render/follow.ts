@@ -1,6 +1,6 @@
 import type { Region, RenderState } from "@/types/post";
 import {
-  type Ctx, accentOf, archivo, blockH, drawContain, drawCover, fitStyled, montserrat, rrect, setShadow, uploaded, verifiedBadge,
+  type Ctx, accentOf, archivo, blockH, drawContain, drawCover, fitStyled, leadOf, montserrat, rrect, setShadow, uploaded, verifiedBadge,
 } from "./helpers";
 
 export function follow(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -132,7 +132,7 @@ export function follow(ctx: Ctx, { brand, posts, frame }: RenderState): Region[]
   const top = cy0 + chh + 70;
   const maxH = H - 50 - top;
   const maxW = W - 80;
-  const lh = 1.0;
+  const lh = leadOf(style, 1.0);
   ctx.save();
   const fit = fitStyled(ctx, brand.cta, style, maxW * 0.9, maxH, lh, 150, 40);
   const bh = blockH(fit.lines.length, fit.size, lh);

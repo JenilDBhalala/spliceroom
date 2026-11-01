@@ -3,6 +3,7 @@ import { useEditor } from "@/lib/store";
 import ColorField from "@/components/fields/ColorField";
 import FontPicker from "@/components/fields/FontPicker";
 import Toggle from "@/components/fields/Toggle";
+import TypeControls from "@/components/fields/TypeControls";
 import { Note } from "./ui";
 
 /** Font, colors, size and caps for a template's main text. Collapsed by default to keep the panel short. */
@@ -18,7 +19,7 @@ export default function StyleSection({ postKey, note }: { postKey: StyledKey; no
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3.5 font-semibold [&::-webkit-details-marker]:hidden">
         <span>
           Text style
-          <span className="ml-2 text-xs font-normal text-muted">font, colors, size</span>
+          <span className="ml-2 text-xs font-normal text-muted">font, weight, spacing, colors</span>
         </span>
         <span aria-hidden className="text-muted transition-transform group-open:rotate-180">
           ▾
@@ -27,6 +28,7 @@ export default function StyleSection({ postKey, note }: { postKey: StyledKey; no
       <div className="flex flex-col gap-3.5 border-t border-line p-3.5">
         {note && <Note>{note}</Note>}
         <FontPicker label="Font" value={st.font} onChange={(font) => set({ font })} />
+        <TypeControls font={st.font} weight={st.weight} tracking={st.tracking} leading={st.leading} onChange={set} />
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
           <ColorField label="Text color" value={st.color} onChange={(color) => set({ color })} />
           <div className="flex flex-col gap-1">
@@ -46,7 +48,7 @@ export default function StyleSection({ postKey, note }: { postKey: StyledKey; no
           <input
             id={`${postKey}-scale`}
             type="range"
-            min={0.7}
+            min={0.4}
             max={1.3}
             step={0.05}
             value={st.scale}

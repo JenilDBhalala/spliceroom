@@ -1,7 +1,7 @@
 import type { Region, RenderState } from "@/types/post";
 import { watermark } from "./meme";
 import {
-  type Ctx, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, fitText, imageOf, montserrat, playfair, toks,
+  type Ctx, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, fitText, imageOf, montserrat, playfair, toks,
 } from "./helpers";
 
 /** Big quote with author and source, on a darkened photo or a solid color. */
@@ -26,7 +26,7 @@ export function quote(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
   }
 
   // Measure everything first, then center the whole block vertically.
-  const lh = 1.18;
+  const lh = leadOf(p.style, 1.18);
   ctx.save();
   const text = fitStyled(ctx, p.quote, p.style, W - 160, H * 0.5, lh, 84, 32);
   ctx.restore();

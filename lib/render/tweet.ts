@@ -1,7 +1,16 @@
 import type { Region, RenderState } from "@/types/post";
 import {
-  type Ctx, accentOf, archivo, blockH, drawAvatar, drawCover, drawLines, fitStyled, imageOf, rrect, uploaded, verifiedBadge,
+  type Ctx, accentOf, archivo, blockH, drawAvatar, drawCover, drawLines, fitStyled, leadOf, imageOf, rrect, uploaded, verifiedBadge,
 } from "./helpers";
+
+/** "9:41 PM · 1 Nov 2026" in the viewer's own locale, like a real post. */
+export function nowStamp(d = new Date()) {
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const date = d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  return `${time} · ${date}`;
+}
+
+const SHAPE_RATIO = { wide: 9 / 16, square: 1, tall: 5 / 4 } as const;
 
 const THEME = {
   dark: { card: "#000", border: "#2f3336", name: "#e7e9ea", muted: "#71767b" },
@@ -26,10 +35,19 @@ export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
   const cardW = W - margin * 2;
   const innerW = cardW - pad * 2;
   const headerH = 120;
-  const dateH = p.date.trim() ? 30 + 34 : 0;
+  const date = p.autoDate ? nowStamp() : p.date.trim();
+  const dateH = date ? 30 + 34 : 0;
   const avail = H - margin * 2 - pad * 2 - headerH - 36 - dateH;
-  const imgH = p.showImage ? Math.min(innerW * 0.62, avail * 0.55) : 0;
-  const lh = 1.3;
+  let imgH = 0;
+  if (p.showImage) {
+    const shape = p.imgShape ?? "auto";
+    const im = imageOf(p.img);
+    const natural = im ? ((im as HTMLImageElement).naturalHeight || im.height) / ((im as HTMLImageElement).naturalWidth || im.width) : 0.62;
+    const ratio = shape === "auto" ? 0.62 : shape === "original" ? natural : SHAPE_RATIO[shape];
+    // Auto keeps the original fit; a chosen shape may take more room but leaves space for the text.
+    imgH = Math.min(innerW * ratio, avail * (shape === "auto" ? 0.55 : 0.72));
+  }
+  const lh = leadOf(p.style, 1.3);
   ctx.save();
   const fit = fitStyled(ctx, p.text, p.style, innerW, avail - (imgH ? imgH + 30 : 0), lh, 60, 28);
   ctx.restore();
@@ -88,7 +106,7 @@ export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
     ctx.font = archivo(400, 30);
     ctx.textAlign = "left";
     ctx.fillStyle = t.muted;
-    ctx.fillText(p.date, x0 + pad, y + 30 + 26);
+    ctx.fillText(date, x0 + pad, y + 30 + 26);
   }
   return regs;
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { track } from "@/lib/analytics";
 import { downloadPost } from "@/lib/export";
 import { renderStateOf, useEditor } from "@/lib/store";
 import { templateInfo } from "@/lib/templates";
@@ -22,6 +23,7 @@ export default function TopBar() {
     const s = useEditor.getState();
     try {
       await downloadPost(renderStateOf(s), s.fmt);
+      track("download", { template: s.fmt, size: s.size, scale: s.brand.exportScale });
     } catch {
       s.showToast("Could not save the file. Try again.");
     } finally {

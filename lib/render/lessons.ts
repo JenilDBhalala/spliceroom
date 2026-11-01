@@ -1,7 +1,7 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import { brandMark } from "./headline";
 import {
-  type Ctx, type Wrapped, accentOf, anton, archivo, blockH, drawCover, drawLines, fadeBottom, fitStyled, fitText, imageOf, montserrat,
+  type Ctx, type Wrapped, accentOf, anton, archivo, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, fitText, imageOf, montserrat,
   shadowOff, shadowOn, swipeTag, toks, uploaded, wrap,
 } from "./helpers";
 
@@ -26,7 +26,7 @@ export function lessonsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Re
     ctx.drawImage(logo, W / 2 - w / 2, titleTop, w, h);
     shadowOff(ctx);
   } else {
-    const lh = 1.0;
+    const lh = leadOf(p.style, 1.0);
     ctx.save();
     const fit = fitStyled(ctx, p.title, p.style, W - 120, H * 0.24, lh, 150, 44);
     titleTop = titleBottom - blockH(fit.lines.length, fit.size, lh);
@@ -79,7 +79,7 @@ export function lessonItem(ctx: Ctx, { brand, posts, frame }: RenderState, sl: S
 
   // Lesson title, then the body text in the space left above the footer.
   const footerY = H - 56;
-  const tlh = 1.04;
+  const tlh = leadOf(p.style, 1.04);
   ctx.save();
   const title = fitStyled(ctx, ls.title, p.style, maxW, 180, tlh, 76, 36);
   drawLines(ctx, title, left, y, tlh, p.style.color, accent, "left");

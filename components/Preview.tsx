@@ -81,7 +81,7 @@ export default function Preview() {
   const setScale = (reg: Region, v: number) => {
     const { update } = useEditor.getState();
     if (!reg.layer) return update(reg.path, { zoom: Math.max(1, Math.min(3, v)) });
-    const [lo, hi] = reg.layer.resize === "size" ? [12, 420] : [0.05, 1.2];
+    const [lo, hi] = reg.layer.resize === "size" ? [10, 420] : [0.05, 1.2];
     update(reg.path, { [reg.layer.resize]: Math.max(lo, Math.min(hi, v)) });
   };
   /** Where a dropped or pasted image goes for a region (null for text layers). */

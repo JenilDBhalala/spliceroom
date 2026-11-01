@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { FormatId } from "@/types/post";
+import { track } from "@/lib/analytics";
 import { renderSlide, slidesFor } from "@/lib/render";
 import { useEditor, useRenderState } from "@/lib/store";
 import { TEMPLATE_GROUPS } from "@/lib/templates";
@@ -19,6 +20,7 @@ export default function TemplatePicker({ open, onClose }: { open: boolean; onClo
 
   const pick = (id: FormatId) => {
     setFmt(id);
+    track("template_select", { template: id });
     onClose();
   };
 

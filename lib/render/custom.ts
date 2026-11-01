@@ -39,13 +39,14 @@ export function custom(ctx: Ctx, { brand, posts, frame }: RenderState): Region[]
 
 function drawText(ctx: Ctx, l: TextLayer, brand: Brand, { W, H }: Frame): Box {
   const def = fontDef(l.font);
-  const lh = def.group === "Handwritten & script" ? 1.3 : def.key === "Press Start 2P" ? 1.45 : 1.12;
+  // Layers saved before weight/spacing existed lack those fields; ?? keeps the old look.
+  const lh = (def.group === "Handwritten & script" ? 1.3 : def.key === "Press Start 2P" ? 1.45 : 1.12) * (l.leading ?? 1);
   const size = l.size;
   const cx = l.x * W;
   const cy = l.y * H;
   ctx.save();
-  ctx.letterSpacing = l.font === "Cinzel" ? `${Math.round(size / 15)}px` : "0px";
-  ctx.font = fontFace(l.font, size);
+  ctx.letterSpacing = `${(l.font === "Cinzel" ? Math.round(size / 15) : 0) + (l.tracking ?? 0) * size}px`;
+  ctx.font = fontFace(l.font, size, l.weight);
   const res = wrap(ctx, toks(l.text, l.caps), l.width * W);
   res.size = size;
   if (!res.lines.length) {

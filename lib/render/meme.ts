@@ -1,5 +1,5 @@
 import type { Brand, Frame, Region, RenderState } from "@/types/post";
-import { type Ctx, type Wrapped, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, imageOf, shadowOff, shadowOn } from "./helpers";
+import { type Ctx, type Wrapped, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, imageOf, shadowOff, shadowOn } from "./helpers";
 
 export function meme(ctx: Ctx, state: RenderState): Region[] {
   return state.posts.meme.mode === "caption" ? captionMeme(ctx, state) : classicMeme(ctx, state);
@@ -11,7 +11,7 @@ function classicMeme(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
   const p = posts.meme;
   const accent = accentOf(brand, p.style);
   drawCover(ctx, imageOf(p.img), p.img, 0, 0, W, H);
-  const lh = 1.02;
+  const lh = leadOf(p.style, 1.02);
   const maxH = H * 0.27;
   if (p.top.trim()) {
     ctx.save();
@@ -35,7 +35,7 @@ function captionMeme(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
   const p = posts.meme;
   const padX = 60;
   const padY = 54;
-  const lh = 1.22;
+  const lh = leadOf(p.style, 1.22);
   ctx.save();
   const fit = fitStyled(ctx, p.caption, p.style, W - padX * 2, H * 0.45, lh, 64, 30);
   const barH = p.caption.trim() ? blockH(fit.lines.length, fit.size, lh) + padY * 2 : 0;

@@ -1,6 +1,6 @@
 import type { Brand, Region, RenderState } from "@/types/post";
 import {
-  type Ctx, accentOf, bebas, blockH, drawCover, drawLines, fadeBottom, fitStyled, imageOf, montserrat, shadowOff, shadowOn, uploaded,
+  type Ctx, accentOf, bebas, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, imageOf, montserrat, shadowOff, shadowOn, uploaded,
 } from "./helpers";
 
 /** Page logo, or the page name in the accent color, top left. */
@@ -46,7 +46,7 @@ export function hlCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[
     ctx.stroke();
     shadowOff(ctx);
   }
-  const lh = 1.1;
+  const lh = leadOf(p.style, 1.1);
   ctx.save();
   const fit = fitStyled(ctx, p.text, p.style, W - 150, H * 0.27, lh, 96, 34);
   const top = H * 0.715 + (H * 0.27 - blockH(fit.lines.length, fit.size, lh)) / 2;
