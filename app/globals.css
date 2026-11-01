@@ -121,6 +121,40 @@
     }
   }
 
+  /* Long-form text on the legal pages. */
+  .legal {
+    line-height: 1.65;
+    font-size: 15px;
+    & h1 {
+      @apply m-0 font-display text-4xl leading-tight tracking-[.02em] uppercase;
+    }
+    & h2 {
+      @apply mt-10 mb-2 text-lg font-bold;
+    }
+    & h3 {
+      @apply mt-6 mb-1 text-[15px] font-bold;
+    }
+    & p,
+    & ul {
+      @apply my-3;
+    }
+    & ul {
+      @apply list-disc pl-5;
+    }
+    & li {
+      @apply my-1.5;
+    }
+    & a {
+      @apply text-accent underline underline-offset-2;
+    }
+    & strong {
+      @apply text-fg;
+    }
+    & code {
+      @apply rounded bg-raise px-1 py-0.5 text-[13px];
+    }
+  }
+
   .checker {
     background: repeating-conic-gradient(#232823 0 25%, #1a1e1a 0 50%) 0 0 / 12px 12px;
   }

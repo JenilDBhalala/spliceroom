@@ -1,3 +1,4 @@
+import Link from "next/link";
 import EditorLoader from "@/components/EditorLoader";
 import LogoMark from "@/components/LogoMark";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
@@ -34,6 +35,14 @@ function Intro() {
         ))}
       </ul>
       <p className="m-0 text-sm text-muted">Loading the editor…</p>
+      <nav aria-label="Legal" className="flex gap-4 text-xs text-muted">
+        <Link href="/privacy" className="underline-offset-2 hover:underline">
+          Privacy Policy
+        </Link>
+        <Link href="/terms" className="underline-offset-2 hover:underline">
+          Terms of Use
+        </Link>
+      </nav>
     </main>
   );
 }

@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import ConsentBanner from "@/components/ConsentBanner";
+import { CONSENT_DEFAULTS_SCRIPT } from "@/lib/consent";
 import { GA_ID, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import { fontVariables } from "./fonts";
 import "./globals.css";
@@ -32,12 +35,23 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// Production only, so local development doesn't count as visits.
+const analytics = Boolean(GA_ID) && process.env.NODE_ENV === "production";
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fontVariables} h-full`}>
-      <body className="h-full">{children}</body>
-      {/* Production only, so local development doesn't count as visits. */}
-      {GA_ID && process.env.NODE_ENV === "production" && <GoogleAnalytics gaId={GA_ID} />}
+      <body className="h-full">
+        {children}
+        {GA_ID && <ConsentBanner />}
+        {/* Consent defaults must be set before Google Analytics loads. */}
+        {analytics && (
+          <Script id="consent-defaults" strategy="beforeInteractive">
+            {CONSENT_DEFAULTS_SCRIPT}
+          </Script>
+        )}
+      </body>
+      {analytics && <GoogleAnalytics gaId={GA_ID} />}
     </html>
   );
 }

@@ -27,3 +27,10 @@ export const SITE_URL = new URL(
 
 /** Google Analytics 4 measurement ID (public). Override with NEXT_PUBLIC_GA_ID; set it to "" to turn analytics off. */
 export const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-6SMGJSW1FE";
+
+/** Who runs the site, for the Privacy Policy and Terms. */
+export const OPERATOR = "Jenil Bhalala";
+export const OPERATOR_COUNTRY = "India";
+export const CONTACT_EMAIL = "work.jenil.bhalala@gmail.com";
+/** Shown as "Last updated" on the legal pages; change it whenever they change. */
+export const LEGAL_UPDATED = "1 November 2026";

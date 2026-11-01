@@ -1,6 +1,7 @@
 import type { Posts, SlideKind, StyledKey } from "@/types/post";
 import { useEditor, useSlides } from "@/lib/store";
 import { templateInfo } from "@/lib/templates";
+import LegalLinks from "./LegalLinks";
 import BrandPanel from "./panels/BrandPanel";
 import ComparePanel from "./panels/ComparePanel";
 import CustomPanel from "./panels/CustomPanel";
@@ -93,6 +94,7 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
           Start over
         </button>
       </div>
+      <LegalLinks />
     </>
   );
 }

@@ -5,6 +5,7 @@ import ImageSlot from "@/components/fields/ImageSlot";
 import SelectField from "@/components/fields/SelectField";
 import TextField from "@/components/fields/TextField";
 import Toggle from "@/components/fields/Toggle";
+import LegalLinks from "@/components/LegalLinks";
 import { Group, Note, PanelHeader, Row } from "./ui";
 
 const EXPORT_SIZES = [
@@ -56,6 +57,7 @@ export default function BrandPanel({ onDone }: { onDone?: () => void }) {
         />
         <Note>The post shape (4:5, 1:1, 9:16) is set at the top. The sharper size stays crisp when zoomed in; Instagram scales it down on upload.</Note>
       </Group>
+      <LegalLinks />
     </>
   );
 }
