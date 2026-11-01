@@ -14,7 +14,8 @@ import TopBar from "./TopBar";
 
 setFontFamilies(canvasFamilies);
 
-export default function Editor() {
+/** `onReady` fires once saved work has loaded and the editor is on screen. */
+export default function Editor({ onReady }: { onReady?: () => void }) {
   const accent = useEditor((s) => s.brand.accent);
   // Saved work loads from IndexedDB asynchronously; wait so the sample content doesn't flash first.
   const hydrated = useSyncExternalStore(
@@ -42,9 +43,12 @@ export default function Editor() {
       });
   }, []);
 
-  if (!hydrated) {
-    return <div className="grid min-h-dvh place-items-center text-sm text-muted">Loading your work…</div>;
-  }
+  useEffect(() => {
+    if (hydrated) onReady?.();
+  }, [hydrated, onReady]);
+
+  // The page's server-rendered intro stays visible until saved work is restored.
+  if (!hydrated) return null;
 
   return (
     // Phones: the page scrolls and the preview stays pinned on top while you edit below it.

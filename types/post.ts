@@ -1,4 +1,5 @@
 export type FormatId =
+  | "custom"
   | "headline"
   | "list"
   | "news"
@@ -39,7 +40,28 @@ export interface ImageSlot extends Framing {
   ph: Placeholder | null;
 }
 
-export type FontKey = "Montserrat" | "Anton" | "Bebas Neue" | "Cinzel" | "Playfair Display" | "Archivo";
+export type FontKey =
+  | "Montserrat"
+  | "Anton"
+  | "Bebas Neue"
+  | "Oswald"
+  | "Archivo Black"
+  | "Poppins"
+  | "Archivo"
+  | "Space Grotesk"
+  | "Courier Prime"
+  | "Playfair Display"
+  | "DM Serif Display"
+  | "Abril Fatface"
+  | "Cinzel"
+  | "Permanent Marker"
+  | "Caveat"
+  | "Pacifico"
+  | "Lobster"
+  | "Dancing Script"
+  | "Bangers"
+  | "Press Start 2P"
+  | "Creepster";
 /** Kept for list movie titles, which pick from the same fonts. */
 export type TitleFont = FontKey;
 
@@ -218,11 +240,61 @@ export interface ComparePost {
   vs: boolean;
 }
 
+/** A free-form text block on the blank canvas. Position is its center, as a fraction of the slide. */
+export interface TextLayer {
+  kind: "text";
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  font: FontKey;
+  /** Font size in layout units (the slide is 1080 wide). */
+  size: number;
+  color: string;
+  /** Color for *starred* words; null = brand theme color. */
+  accent: string | null;
+  align: "left" | "center" | "right";
+  caps: boolean;
+  /** Wrapping width as a fraction of the slide width. */
+  width: number;
+  effect: "none" | "outline" | "shadow" | "box";
+  /** Outline, shadow or box color. */
+  effectColor: string;
+}
+
+/** A photo placed on the blank canvas. */
+export interface ImageLayer {
+  kind: "image";
+  id: string;
+  x: number;
+  y: number;
+  img: ImageSlot;
+  /** Width as a fraction of the slide width. */
+  w: number;
+  /** "free" keeps the photo's own shape; the others crop it. */
+  crop: "free" | "square" | "wide" | "tall";
+  shape: "rect" | "rounded" | "circle";
+  border: boolean;
+}
+
+export type Layer = TextLayer | ImageLayer;
+
+export interface CustomPost {
+  bg: "photo" | "color" | "gradient";
+  bgImg: ImageSlot;
+  bgColor: string;
+  gradient: [string, string];
+  /** Darkening over a photo background, 0–0.8. */
+  darken: number;
+  layers: Layer[];
+}
+
 export interface FollowPost {
   style: TextStyle;
 }
 
 export interface Posts {
+  custom: CustomPost;
   headline: HeadlinePost;
   list: ListPost;
   news: NewsPost;
@@ -236,7 +308,11 @@ export interface Posts {
   follow: FollowPost;
 }
 
+/** Templates with one main text style (every template but the blank canvas). */
+export type StyledKey = Exclude<keyof Posts, "custom">;
+
 export type SlideKind =
+  | "custom"
   | "hlCover"
   | "hlClean"
   | "listCover"
@@ -273,6 +349,8 @@ export interface Region {
   path: SlotPath;
   /** Slot holding the image, when it differs from `path` (the clean slide). */
   imgPath?: SlotPath;
+  /** A canvas layer: dragging moves it (x/y at `path`), zooming resizes this field. */
+  layer?: { id: string; resize: "size" | "w" };
 }
 
 export interface RenderState {

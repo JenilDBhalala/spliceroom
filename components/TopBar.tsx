@@ -2,6 +2,7 @@ import { useState } from "react";
 import { downloadPost } from "@/lib/export";
 import { renderStateOf, useEditor } from "@/lib/store";
 import { templateInfo } from "@/lib/templates";
+import LogoMark from "./LogoMark";
 import SizePicker from "./SizePicker";
 import TemplatePicker from "./TemplatePicker";
 
@@ -30,10 +31,11 @@ export default function TopBar() {
 
   return (
     <header className="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-line bg-bg pt-[max(12px,env(safe-area-inset-top,0px))] pr-[max(16px,env(safe-area-inset-right,0px))] pb-3 pl-[max(16px,env(safe-area-inset-left,0px))] md:flex-nowrap md:gap-x-4">
-      <div className="flex items-center gap-2 font-display text-[26px] leading-none tracking-[.03em] uppercase md:text-[30px]">
-        <i className="inline-block size-3 rounded-full bg-accent" />
+      <h1 className="m-0 flex items-center gap-2 font-display text-[26px] font-normal leading-none tracking-[.03em] uppercase md:text-[30px]">
+        <LogoMark className="size-6 md:size-7" id="bar-logo" />
         Spliceroom
-      </div>
+        <span className="sr-only"> meme, poster and Instagram post maker</span>
+      </h1>
 
       <div className="order-last flex w-full min-w-0 items-center gap-2 md:order-none md:w-auto md:flex-1">
         <button

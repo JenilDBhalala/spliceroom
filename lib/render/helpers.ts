@@ -1,6 +1,6 @@
-import type { Brand, FontKey, Frame, Framing, ImageSlot, PostSize, TextStyle } from "@/types/post";
+import type { Brand, Frame, Framing, ImageSlot, PostSize, TextStyle } from "@/types/post";
 import { imageFor } from "@/lib/images";
-import { F } from "./fonts";
+import { F, fontFace } from "./fonts";
 import { placeholderImage } from "./placeholder";
 
 /** Slides are always laid out 1080 units wide; the height depends on the post size. */
@@ -21,23 +21,7 @@ export const bebas = (size: number) => `400 ${size}px ${F.bebas}, Impact, sans-s
 export const cinzel = (size: number) => `700 ${size}px ${F.cinzel}, Georgia, serif`;
 export const playfair = (size: number) => `700 ${size}px ${F.playfair}, Georgia, serif`;
 
-/** Canvas font string for a selectable font at its display weight. */
-export function fontFace(font: FontKey, size: number) {
-  switch (font) {
-    case "Anton":
-      return anton(size);
-    case "Bebas Neue":
-      return bebas(size);
-    case "Cinzel":
-      return cinzel(size);
-    case "Playfair Display":
-      return playfair(size);
-    case "Archivo":
-      return archivo(600, size);
-    default:
-      return montserrat(900, size);
-  }
-}
+export { fontFace } from "./fonts";
 
 /* ---------- template text style ---------- */
 

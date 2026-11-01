@@ -1,8 +1,9 @@
-import type { Posts, SlideKind } from "@/types/post";
+import type { Posts, SlideKind, StyledKey } from "@/types/post";
 import { useEditor, useSlides } from "@/lib/store";
 import { templateInfo } from "@/lib/templates";
 import BrandPanel from "./panels/BrandPanel";
 import ComparePanel from "./panels/ComparePanel";
+import CustomPanel from "./panels/CustomPanel";
 import FollowPanel from "./panels/FollowPanel";
 import HeadlinePanel from "./panels/HeadlinePanel";
 import LessonsPanel from "./panels/LessonsPanel";
@@ -17,6 +18,7 @@ import TweetPanel from "./panels/TweetPanel";
 import { PanelHeader, SlideCount } from "./panels/ui";
 
 const TITLES: Record<SlideKind, string> = {
+  custom: "Blank canvas",
   hlCover: "Headline cover",
   hlClean: "Clean photo",
   listCover: "List cover",
@@ -55,7 +57,8 @@ export default function SlidePanel() {
   if (mode === "brand") body = <BrandPanel />;
   else {
     const k = slide.kind;
-    const styleKey: keyof Posts = k === "follow" ? "follow" : (fmt as keyof Posts);
+    // The blank canvas styles each text layer on its own, so it has no shared text style.
+    const styleKey: StyledKey | null = k === "follow" ? "follow" : fmt === "custom" ? null : (fmt as StyledKey);
     body = (
       <>
         <PanelHeader title={TITLES[k]}>{slides.length > 1 && <SlideCount sel={sel} total={slides.length} />}</PanelHeader>
@@ -70,7 +73,8 @@ export default function SlidePanel() {
         {k === "quote" && <QuotePanel />}
         {k === "compare" && <ComparePanel />}
         {k === "follow" && <FollowPanel />}
-        <StyleSection key={styleKey} postKey={styleKey} note={STYLE_NOTES[k]} />
+        {k === "custom" && <CustomPanel />}
+        {styleKey && <StyleSection key={styleKey} postKey={styleKey} note={STYLE_NOTES[k]} />}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
           <span className="flex items-center gap-2 text-xs text-muted">
             <i aria-hidden className="inline-block size-2 rounded-full bg-accent" />

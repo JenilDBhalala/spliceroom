@@ -1,21 +1,12 @@
-import type { FontKey, Posts, TextStyle } from "@/types/post";
+import type { StyledKey, TextStyle } from "@/types/post";
 import { useEditor } from "@/lib/store";
 import ColorField from "@/components/fields/ColorField";
-import SelectField from "@/components/fields/SelectField";
+import FontPicker from "@/components/fields/FontPicker";
 import Toggle from "@/components/fields/Toggle";
 import { Note } from "./ui";
 
-const FONTS: readonly (readonly [FontKey, string])[] = [
-  ["Montserrat", "Montserrat Black (bold, modern)"],
-  ["Anton", "Anton (tall, meme)"],
-  ["Bebas Neue", "Bebas Neue (condensed, poster)"],
-  ["Cinzel", "Cinzel (epic, classic)"],
-  ["Playfair Display", "Playfair (elegant serif)"],
-  ["Archivo", "Archivo (clean, everyday)"],
-];
-
 /** Font, colors, size and caps for a template's main text. Collapsed by default to keep the panel short. */
-export default function StyleSection({ postKey, note }: { postKey: keyof Posts; note?: string }) {
+export default function StyleSection({ postKey, note }: { postKey: StyledKey; note?: string }) {
   const st = useEditor((s) => s.posts[postKey].style);
   const theme = useEditor((s) => s.brand.accent);
   const update = useEditor((s) => s.update);
@@ -35,7 +26,7 @@ export default function StyleSection({ postKey, note }: { postKey: keyof Posts; 
       </summary>
       <div className="flex flex-col gap-3.5 border-t border-line p-3.5">
         {note && <Note>{note}</Note>}
-        <SelectField label="Font" value={st.font} options={FONTS} onChange={(font) => set({ font })} />
+        <FontPicker label="Font" value={st.font} onChange={(font) => set({ font })} />
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
           <ColorField label="Text color" value={st.color} onChange={(color) => set({ color })} />
           <div className="flex flex-col gap-1">

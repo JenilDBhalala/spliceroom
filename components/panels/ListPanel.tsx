@@ -1,6 +1,7 @@
-import type { ListItem, Slide, TitleFont } from "@/types/post";
+import type { ListItem, Slide } from "@/types/post";
 import { useEditor, useField } from "@/lib/store";
 import ColorField from "@/components/fields/ColorField";
+import FontPicker from "@/components/fields/FontPicker";
 import ImageSlot from "@/components/fields/ImageSlot";
 import SelectField from "@/components/fields/SelectField";
 import TextField from "@/components/fields/TextField";
@@ -9,12 +10,6 @@ import { Group, HIGHLIGHT_TIP, OrderButtons, Row } from "./ui";
 
 const P = ["posts", "list"] as const;
 const PANEL_COUNTS = [[2, "2 photos"], [3, "3 photos"], [4, "4 photos"]] as const;
-const TITLE_FONTS: readonly (readonly [TitleFont, string])[] = [
-  ["Montserrat", "Montserrat Black"],
-  ["Anton", "Anton"],
-  ["Bebas Neue", "Bebas Neue"],
-  ["Cinzel", "Cinzel (epic)"],
-];
 
 export default function ListPanel({ slide }: { slide: Slide }) {
   return slide.kind === "listItem" ? <MovieCard i={slide.i!} /> : <Cover />;
@@ -61,10 +56,8 @@ function MovieCard({ i }: { i: number }) {
         empty="Optional. A transparent PNG of the title. Without one, the title text is used."
       />
       <TextField label="Title text" value={it.title} onChange={(title) => set({ title })} tip="Shown when there is no title logo." />
-      <Row>
-        <SelectField label="Title font" value={it.font} options={TITLE_FONTS} onChange={(font) => set({ font })} />
-        <ColorField label="Title color" value={it.color} onChange={(color) => set({ color })} />
-      </Row>
+      <FontPicker label="Title font" value={it.font} onChange={(font) => set({ font })} />
+      <ColorField label="Title color" value={it.color} onChange={(color) => set({ color })} />
       <Group title="Rating">
         <Row>
           <TextField label="IMDb rating" value={it.rating} onChange={(rating) => set({ rating })} />

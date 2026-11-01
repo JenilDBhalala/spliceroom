@@ -11,18 +11,21 @@ import { tweet } from "./tweet";
 import { quote } from "./quote";
 import { compare } from "./compare";
 import { follow } from "./follow";
+import { custom } from "./custom";
 
 export { W, FRAMES } from "./helpers";
 
 type Renderer = (ctx: Ctx, state: RenderState, slide: Slide) => Region[];
 
 const RENDERERS: Record<SlideKind, Renderer> = {
+  custom,
   hlCover, hlClean, listCover, listItem, newsCover, newsStory, lessonsCover, lessonItem, timeline, poster, meme, tweet, quote, compare,
   follow,
 };
 
 /** Single-slide templates: slide kind and strip label. */
 const SINGLE: Partial<Record<FormatId, Slide>> = {
+  custom: { kind: "custom", label: "Canvas" },
   timeline: { kind: "timeline", label: "Timeline" },
   poster: { kind: "poster", label: "Poster" },
   meme: { kind: "meme", label: "Meme" },

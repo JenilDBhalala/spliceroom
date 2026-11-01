@@ -16,9 +16,12 @@ export default function Preview() {
   const regionsRef = useRef<Region[]>([]);
   // Active pointers (canvas units) and the gesture they drive: one finger drags, two pinch.
   const pointers = useRef(new Map<number, Pt>());
-  const gesture = useRef<{ reg: Region; last: Pt; pinch?: { dist: number; zoom: number } } | null>(null);
+  const gesture = useRef<{ reg: Region; last: Pt; pinch?: { dist: number; value: number } } | null>(null);
   const [grab, setGrab] = useState(false);
   const [dragging, setDragging] = useState(false);
+  // Outline of the selected blank-canvas layer, in layout units.
+  const [selBox, setSelBox] = useState<Region | null>(null);
+  const layerSel = useEditor((s) => (s.fmt === "custom" ? s.layerSel : null));
   const state = useRenderState();
   const { W, H } = state.frame;
   const frameRef = useRef(state.frame);
@@ -59,9 +62,10 @@ export default function Preview() {
       }
       regionsRef.current = renderSlide(ctx, state, slide, pxWidth / W);
       setGrab(regionsRef.current.length > 0);
+      setSelBox(regionsRef.current.find((r) => r.layer && r.layer.id === layerSel) ?? null);
     });
     return () => cancelAnimationFrame(raf);
-  }, [state, slide, tick, pxWidth, W, H]);
+  }, [state, slide, tick, pxWidth, W, H, layerSel]);
 
   const toCanvas = (e: { clientX: number; clientY: number }): Pt => {
     const r = canvasRef.current!.getBoundingClientRect();
@@ -69,7 +73,22 @@ export default function Preview() {
     return { x: ((e.clientX - r.left) * f.W) / r.width, y: ((e.clientY - r.top) * f.H) / r.height };
   };
   const hit = ({ x, y }: Pt) => [...regionsRef.current].reverse().find((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
-  const setZoom = (reg: Region, zoom: number) => useEditor.getState().update(reg.path, { zoom: Math.max(1, Math.min(3, zoom)) });
+  // A region's "size": photo zoom, or for canvas layers the font size (text) or width (photo).
+  const scaleOf = (reg: Region) => {
+    const o = getIn<Record<string, number>>(useEditor.getState(), reg.path);
+    return reg.layer ? o[reg.layer.resize] : o.zoom;
+  };
+  const setScale = (reg: Region, v: number) => {
+    const { update } = useEditor.getState();
+    if (!reg.layer) return update(reg.path, { zoom: Math.max(1, Math.min(3, v)) });
+    const [lo, hi] = reg.layer.resize === "size" ? [12, 420] : [0.05, 1.2];
+    update(reg.path, { [reg.layer.resize]: Math.max(lo, Math.min(hi, v)) });
+  };
+  /** Where a dropped or pasted image goes for a region (null for text layers). */
+  const imageTarget = (reg: Region) => {
+    if (!reg.layer) return reg.imgPath ?? reg.path;
+    return reg.layer.resize === "w" ? [...reg.path, "img"] : null;
+  };
   const distance = () => {
     const [a, b] = [...pointers.current.values()];
     return Math.hypot(a.x - b.x, a.y - b.y);
@@ -82,11 +101,35 @@ export default function Preview() {
       const reg = hit(toCanvas(e));
       if (!reg) return;
       e.preventDefault();
-      const f = getIn<Framing>(useEditor.getState(), reg.path);
-      setZoom(reg, f.zoom * (e.deltaY < 0 ? 1.06 : 1 / 1.06));
+      setScale(reg, scaleOf(reg) * (e.deltaY < 0 ? 1.06 : 1 / 1.06));
     };
     cv.addEventListener("wheel", onWheel, { passive: false });
     return () => cv.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Canvas layers: arrow keys nudge (Shift for bigger steps), Delete removes, Escape deselects.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest("input, textarea, select, [contenteditable], dialog")) return;
+      const st = useEditor.getState();
+      if (st.fmt !== "custom" || !st.layerSel) return;
+      const i = st.posts.custom.layers.findIndex((l) => l.id === st.layerSel);
+      if (i < 0) return;
+      const l = st.posts.custom.layers[i];
+      const step = e.shiftKey ? 0.02 : 0.005;
+      const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+      if (moves[e.key]) {
+        e.preventDefault();
+        const [dx, dy] = moves[e.key];
+        st.update(["posts", "custom", "layers", i], { x: Math.max(0, Math.min(1, l.x + dx)), y: Math.max(0, Math.min(1, l.y + dy)) });
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        st.removeLayer(l.id);
+      } else if (e.key === "Escape") st.setLayerSel(null);
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
   }, []);
 
   // Ctrl+V pastes into the last touched image box, else the slide's main photo.
@@ -97,7 +140,7 @@ export default function Preview() {
       e.preventDefault();
       const { activeSlot, showToast } = useEditor.getState();
       const first = regionsRef.current[0];
-      const target = activeSlot ?? (first && (first.imgPath ?? first.path));
+      const target = activeSlot ?? (first && imageTarget(first));
       if (!target) return showToast("Tap a photo box first, then paste.");
       loadFileInto(target, item.getAsFile());
     };
@@ -132,6 +175,8 @@ export default function Preview() {
           const pt = toCanvas(e);
           if (!gesture.current) {
             const reg = hit(pt);
+            const st = useEditor.getState();
+            if (st.fmt === "custom") st.setLayerSel(reg?.layer?.id ?? null);
             if (!reg) return;
             gesture.current = { reg, last: pt };
             setDragging(true);
@@ -140,7 +185,7 @@ export default function Preview() {
           e.currentTarget.setPointerCapture(e.pointerId);
           if (pointers.current.size === 2) {
             const g = gesture.current;
-            g.pinch = { dist: distance(), zoom: getIn<Framing>(useEditor.getState(), g.reg.path).zoom };
+            g.pinch = { dist: distance(), value: scaleOf(g.reg) };
           }
         }}
         onPointerMove={(e) => {
@@ -149,10 +194,20 @@ export default function Preview() {
           const pt = toCanvas(e);
           pointers.current.set(e.pointerId, pt);
           if (g.pinch && pointers.current.size >= 2) {
-            setZoom(g.reg, (g.pinch.zoom * distance()) / Math.max(1, g.pinch.dist));
+            setScale(g.reg, (g.pinch.value * distance()) / Math.max(1, g.pinch.dist));
             return;
           }
           const st = useEditor.getState();
+          if (g.reg.layer) {
+            const l = getIn<{ x: number; y: number }>(st, g.reg.path);
+            const f = frameRef.current;
+            st.update(g.reg.path, {
+              x: Math.max(0, Math.min(1, l.x + (pt.x - g.last.x) / f.W)),
+              y: Math.max(0, Math.min(1, l.y + (pt.y - g.last.y) / f.H)),
+            });
+            g.last = pt;
+            return;
+          }
           const f = getIn<Framing>(st, g.reg.path);
           const im = imageOf(getIn<ImageSlot>(st, g.reg.imgPath ?? g.reg.path));
           if (im) {
@@ -170,9 +225,22 @@ export default function Preview() {
         onDrop={(e) => {
           e.preventDefault();
           const reg = hit(toCanvas(e)) ?? regionsRef.current[0];
-          if (reg) loadFileInto(reg.imgPath ?? reg.path, e.dataTransfer.files[0]);
+          const target = reg && imageTarget(reg);
+          if (target) loadFileInto(target, e.dataTransfer.files[0]);
         }}
       />
+      {selBox && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute rounded-sm border-2 border-dashed border-accent shadow-[0_0_0_1px_rgba(0,0,0,.5)]"
+          style={{
+            left: `${(selBox.x / W) * 100}%`,
+            top: `${(selBox.y / H) * 100}%`,
+            width: `${(selBox.w / W) * 100}%`,
+            height: `${(selBox.h / H) * 100}%`,
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -14,6 +14,16 @@ export interface TemplateGroup {
 /** The template picker, grouped the way people look for them. */
 export const TEMPLATE_GROUPS: TemplateGroup[] = [
   {
+    name: "Make your own",
+    templates: [
+      {
+        id: "custom",
+        name: "Blank canvas",
+        blurb: "Any meme or poster: add text and photos anywhere. Start from a ready layout.",
+      },
+    ],
+  },
+  {
     name: "Memes & social",
     templates: [
       { id: "meme", name: "Meme", blurb: "Classic top and bottom text, or a caption bar above the photo." },
