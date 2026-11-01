@@ -21,6 +21,24 @@
 @layer base {
   :root {
     color-scheme: dark;
+    /* No grey flash when tapping, like a native app. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* No pull-to-refresh or rubber-band scrolling of the whole app. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
+  /* Remove the double-tap-to-zoom delay on controls. */
+  button,
+  a,
+  label,
+  summary,
+  input,
+  select {
+    touch-action: manipulation;
   }
 
   body {
@@ -91,6 +109,18 @@
     }
   }
 
+  /* App chrome (bars, tabs) isn't text to select; fields inside stay selectable. */
+  .app-chrome {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    & input,
+    & textarea {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+  }
+
   .checker {
     background: repeating-conic-gradient(#232823 0 25%, #1a1e1a 0 50%) 0 0 / 12px 12px;
   }
@@ -101,6 +131,11 @@
     @media (min-width: 768px) {
       width: min(100%, calc((100dvh - 210px) * var(--ar)), 600px);
     }
+  }
+
+  /* Fills its size container (the phone layout's stage), whichever side runs out first. */
+  .preview-fit {
+    width: min(100cqw, calc(100cqh * var(--ar)));
   }
 }
 

@@ -9,9 +9,9 @@ type Pt = { x: number; y: number };
 
 /**
  * The big slide preview: drag a photo to reposition it, scroll or pinch to zoom,
- * drop or paste an image into it.
+ * drop or paste an image into it. `fit` sizes it to fill its container (a size container).
  */
-export default function Preview() {
+export default function Preview({ fit = false }: { fit?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const regionsRef = useRef<Region[]>([]);
   // Active pointers (canvas units) and the gesture they drive: one finger drags, two pinch.
@@ -164,7 +164,7 @@ export default function Preview() {
 
   return (
     <div
-      className="preview relative max-w-full overflow-hidden rounded-md bg-black shadow-[0_18px_50px_rgba(0,0,0,.55)]"
+      className={`${fit ? "preview-fit" : "preview"} relative max-w-full overflow-hidden rounded-md bg-black shadow-[0_18px_50px_rgba(0,0,0,.55)]`}
       style={{ aspectRatio: `${W} / ${H}`, "--ar": W / H } as React.CSSProperties}
     >
       <canvas

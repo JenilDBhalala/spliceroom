@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { CustomPost, ImageLayer, Layer, TextLayer } from "@/types/post";
 import { CANVAS_PRESETS, useEditor } from "@/lib/store";
 import ColorField from "@/components/fields/ColorField";
@@ -137,11 +138,18 @@ const CROPS = [
 ] as const;
 
 function LayerEditor({ layer, index, count }: { layer: Layer; index: number; count: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Bring the settings into view when a layer is picked (on phones it's below the layer list).
+  useEffect(() => {
+    ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, []);
   return (
-    <Group title={layer.kind === "text" ? "Selected text" : "Selected photo"}>
-      <LayerActions layer={layer} index={index} count={count} />
-      {layer.kind === "text" ? <TextLayerFields layer={layer} index={index} /> : <ImageLayerFields layer={layer} index={index} />}
-    </Group>
+    <div ref={ref} className="flex flex-col">
+      <Group title={layer.kind === "text" ? "Selected text" : "Selected photo"}>
+        <LayerActions layer={layer} index={index} count={count} />
+        {layer.kind === "text" ? <TextLayerFields layer={layer} index={index} /> : <ImageLayerFields layer={layer} index={index} />}
+      </Group>
+    </div>
   );
 }
 

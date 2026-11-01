@@ -12,7 +12,8 @@ const EXPORT_SIZES = [
   [1, "Instagram size (1080 wide)"],
 ] as const;
 
-export default function BrandPanel() {
+/** `onDone` overrides the Done button (the phone layout closes its sheet instead). */
+export default function BrandPanel({ onDone }: { onDone?: () => void }) {
   const brand = useEditor((s) => s.brand);
   const update = useEditor((s) => s.update);
   const setMode = useEditor((s) => s.setMode);
@@ -23,7 +24,7 @@ export default function BrandPanel() {
   return (
     <>
       <PanelHeader title="Brand & profile">
-        <button type="button" className="btn btn-small btn-primary" onClick={() => setMode("slide")}>
+        <button type="button" className="btn btn-small btn-primary" onClick={() => (onDone ? onDone() : setMode("slide"))}>
           Done
         </button>
       </PanelHeader>

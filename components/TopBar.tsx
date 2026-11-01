@@ -11,13 +11,9 @@ import TemplatePicker from "./TemplatePicker";
  * Phones: logo + Brand + Download on the first row, template and size on the second.
  * Tablets and up: everything on one row.
  */
-export default function TopBar() {
+/** Download the current post (PNG or zip); `busy` while it renders. */
+export function useDownload() {
   const [busy, setBusy] = useState(false);
-  const [picking, setPicking] = useState(false);
-  const fmt = useEditor((s) => s.fmt);
-  const mode = useEditor((s) => s.mode);
-  const setMode = useEditor((s) => s.setMode);
-
   const download = async () => {
     setBusy(true);
     const s = useEditor.getState();
@@ -30,6 +26,16 @@ export default function TopBar() {
       setBusy(false);
     }
   };
+  return { busy, download };
+}
+
+/** Tablet and desktop top bar (phones use the app shell's own bar). */
+export default function TopBar() {
+  const { busy, download } = useDownload();
+  const [picking, setPicking] = useState(false);
+  const fmt = useEditor((s) => s.fmt);
+  const mode = useEditor((s) => s.mode);
+  const setMode = useEditor((s) => s.setMode);
 
   return (
     <header className="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-line bg-bg pt-[max(12px,env(safe-area-inset-top,0px))] pr-[max(16px,env(safe-area-inset-right,0px))] pb-3 pl-[max(16px,env(safe-area-inset-left,0px))] md:flex-nowrap md:gap-x-4">

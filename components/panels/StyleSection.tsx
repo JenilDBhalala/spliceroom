@@ -7,25 +7,16 @@ import TypeControls from "@/components/fields/TypeControls";
 import { Note } from "./ui";
 
 /** Font, colors, size and caps for a template's main text. Collapsed by default to keep the panel short. */
-export default function StyleSection({ postKey, note }: { postKey: StyledKey; note?: string }) {
+/** `flat` drops the collapsible wrapper (the phone layout shows the style in its own tab). */
+export default function StyleSection({ postKey, note, flat = false }: { postKey: StyledKey; note?: string; flat?: boolean }) {
   const st = useEditor((s) => s.posts[postKey].style);
   const theme = useEditor((s) => s.brand.accent);
   const update = useEditor((s) => s.update);
   const resetStyle = useEditor((s) => s.resetStyle);
   const set = (patch: Partial<TextStyle>) => update(["posts", postKey, "style"], patch);
 
-  return (
-    <details className="group rounded-xl border border-line bg-raise/40 open:bg-transparent">
-      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3.5 font-semibold [&::-webkit-details-marker]:hidden">
-        <span>
-          Text style
-          <span className="ml-2 text-xs font-normal text-muted">font, weight, spacing, colors</span>
-        </span>
-        <span aria-hidden className="text-muted transition-transform group-open:rotate-180">
-          ▾
-        </span>
-      </summary>
-      <div className="flex flex-col gap-3.5 border-t border-line p-3.5">
+  const body = (
+      <div className={flat ? "flex flex-col gap-3.5" : "flex flex-col gap-3.5 border-t border-line p-3.5"}>
         {note && <Note>{note}</Note>}
         <FontPicker label="Font" value={st.font} onChange={(font) => set({ font })} />
         <TypeControls font={st.font} weight={st.weight} tracking={st.tracking} leading={st.leading} onChange={set} />
@@ -61,6 +52,21 @@ export default function StyleSection({ postKey, note }: { postKey: StyledKey; no
           Reset style
         </button>
       </div>
+  );
+  if (flat) return body;
+
+  return (
+    <details className="group rounded-xl border border-line bg-raise/40 open:bg-transparent">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3.5 font-semibold [&::-webkit-details-marker]:hidden">
+        <span>
+          Text style
+          <span className="ml-2 text-xs font-normal text-muted">font, weight, spacing, colors</span>
+        </span>
+        <span aria-hidden className="text-muted transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      {body}
     </details>
   );
 }

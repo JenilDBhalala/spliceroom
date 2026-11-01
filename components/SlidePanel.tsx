@@ -45,62 +45,67 @@ const STYLE_NOTES: Partial<Record<SlideKind, string>> = {
   tweet: "Applies to the post text.",
 };
 
-/** Fields for the selected slide only (or brand settings). */
-export default function SlidePanel() {
-  const mode = useEditor((s) => s.mode);
+/** Which text style the current slide edits (null on the blank canvas, where each layer has its own). */
+export function useStyleTarget(): { key: StyledKey | null; note?: string } {
+  const fmt = useEditor((s) => s.fmt);
+  const { slides, sel } = useSlides();
+  const k = slides[sel].kind;
+  return { key: k === "follow" ? "follow" : fmt === "custom" ? null : (fmt as StyledKey), note: STYLE_NOTES[k] };
+}
+
+/** The selected slide's fields; `withStyle` adds the text style section (the phone layout shows it in its own tab). */
+export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
   const fmt = useEditor((s) => s.fmt);
   const resetTemplate = useEditor((s) => s.resetTemplate);
   const { slides, sel } = useSlides();
+  const style = useStyleTarget();
   const slide = slides[sel];
+  const k = slide.kind;
+  return (
+    <>
+      <PanelHeader title={TITLES[k]}>{slides.length > 1 && <SlideCount sel={sel} total={slides.length} />}</PanelHeader>
+      {(k === "hlCover" || k === "hlClean") && <HeadlinePanel slide={slide} />}
+      {(k === "listCover" || k === "listItem") && <ListPanel slide={slide} />}
+      {(k === "newsCover" || k === "newsStory") && <NewsPanel slide={slide} />}
+      {(k === "lessonsCover" || k === "lessonItem") && <LessonsPanel slide={slide} />}
+      {k === "timeline" && <TimelinePanel />}
+      {k === "poster" && <PosterPanel />}
+      {k === "meme" && <MemePanel />}
+      {k === "tweet" && <TweetPanel />}
+      {k === "quote" && <QuotePanel />}
+      {k === "compare" && <ComparePanel />}
+      {k === "follow" && <FollowPanel />}
+      {k === "custom" && <CustomPanel />}
+      {withStyle && style.key && <StyleSection key={style.key} postKey={style.key} note={style.note} />}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+        <span className="flex items-center gap-2 text-xs text-muted">
+          <i aria-hidden className="inline-block size-2 rounded-full bg-accent" />
+          Changes are saved on this device
+        </span>
+        <button
+          type="button"
+          className="btn btn-small btn-ghost btn-danger"
+          onClick={() => {
+            const name = templateInfo(fmt).name;
+            if (confirm(`Start "${name}" over? Your text, photos and style for this template will be replaced with the sample.`)) resetTemplate(fmt as keyof Posts);
+          }}
+        >
+          Start over
+        </button>
+      </div>
+    </>
+  );
+}
 
-  let body;
-  if (mode === "brand") body = <BrandPanel />;
-  else {
-    const k = slide.kind;
-    // The blank canvas styles each text layer on its own, so it has no shared text style.
-    const styleKey: StyledKey | null = k === "follow" ? "follow" : fmt === "custom" ? null : (fmt as StyledKey);
-    body = (
-      <>
-        <PanelHeader title={TITLES[k]}>{slides.length > 1 && <SlideCount sel={sel} total={slides.length} />}</PanelHeader>
-        {(k === "hlCover" || k === "hlClean") && <HeadlinePanel slide={slide} />}
-        {(k === "listCover" || k === "listItem") && <ListPanel slide={slide} />}
-        {(k === "newsCover" || k === "newsStory") && <NewsPanel slide={slide} />}
-        {(k === "lessonsCover" || k === "lessonItem") && <LessonsPanel slide={slide} />}
-        {k === "timeline" && <TimelinePanel />}
-        {k === "poster" && <PosterPanel />}
-        {k === "meme" && <MemePanel />}
-        {k === "tweet" && <TweetPanel />}
-        {k === "quote" && <QuotePanel />}
-        {k === "compare" && <ComparePanel />}
-        {k === "follow" && <FollowPanel />}
-        {k === "custom" && <CustomPanel />}
-        {styleKey && <StyleSection key={styleKey} postKey={styleKey} note={STYLE_NOTES[k]} />}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-          <span className="flex items-center gap-2 text-xs text-muted">
-            <i aria-hidden className="inline-block size-2 rounded-full bg-accent" />
-            Changes are saved on this device
-          </span>
-          <button
-            type="button"
-            className="btn btn-small btn-ghost btn-danger"
-            onClick={() => {
-              const name = templateInfo(fmt).name;
-              if (confirm(`Start "${name}" over? Your text, photos and style for this template will be replaced with the sample.`)) resetTemplate(fmt as keyof Posts);
-            }}
-          >
-            Start over
-          </button>
-        </div>
-      </>
-    );
-  }
-
+/** Desktop and tablet side panel: the selected slide's fields, or brand settings. */
+export default function SlidePanel() {
+  const mode = useEditor((s) => s.mode);
   return (
     <aside
       aria-live="polite"
-      className="flex min-w-0 flex-col gap-[18px] bg-panel px-4 pt-5 pb-[calc(40px+env(safe-area-inset-bottom,0px))] max-md:border-t max-md:border-line md:overflow-auto md:border-l md:border-line md:pr-[max(20px,env(safe-area-inset-right,0px))] md:pl-5"
+      className="flex min-w-0 flex-col gap-[18px] overflow-auto border-l border-line bg-panel pt-5 pr-[max(20px,env(safe-area-inset-right,0px))] pb-[calc(40px+env(safe-area-inset-bottom,0px))] pl-5"
     >
-      {body}
+      {mode === "brand" ? <BrandPanel /> : <SlideFields />}
     </aside>
   );
 }

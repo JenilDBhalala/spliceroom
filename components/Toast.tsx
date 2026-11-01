@@ -15,7 +15,7 @@ export default function Toast() {
   return (
     <div
       role="status"
-      className="fixed bottom-[calc(20px+env(safe-area-inset-bottom,0px))] left-1/2 z-20 max-w-[calc(100%-32px)] -translate-x-1/2 rounded-full bg-fg px-4 py-2.5 text-[13px] font-semibold text-bg shadow-[0_8px_30px_rgba(0,0,0,.5)]"
+      className="fixed bottom-[calc(76px+env(safe-area-inset-bottom,0px))] left-1/2 md:bottom-[calc(20px+env(safe-area-inset-bottom,0px))] z-20 max-w-[calc(100%-32px)] -translate-x-1/2 rounded-full bg-fg px-4 py-2.5 text-[13px] font-semibold text-bg shadow-[0_8px_30px_rgba(0,0,0,.5)]"
     >
       {toast.msg}
     </div>
