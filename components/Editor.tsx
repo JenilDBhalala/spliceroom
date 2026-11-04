@@ -83,7 +83,7 @@ export default function Editor({ onReady }: { onReady?: () => void }) {
           <p className="text-center text-[12.5px] text-muted">
             {fmt === "custom"
               ? "Click text or a photo on the post to select it. Drag to move it, scroll on it to resize. Ctrl+Z undoes."
-              : "Drag a photo on the post to move it, scroll on it to zoom. Paste an image with Ctrl+V. Ctrl+Z undoes."}
+              : "Drag text or a photo on the post to move it, scroll on it to resize or zoom. Ctrl+Z undoes."}
           </p>
           <SlideStrip />
         </section>

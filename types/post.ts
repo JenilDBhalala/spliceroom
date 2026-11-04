@@ -100,6 +100,8 @@ export interface Brand {
 }
 
 export interface HeadlinePost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   img: ImageSlot;
   /** Framing of the same photo on the clean slide. */
@@ -122,6 +124,8 @@ export interface ListItem {
 }
 
 export interface ListPost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   panels: ImageSlot[];
   panelCount: 2 | 3 | 4;
@@ -138,6 +142,8 @@ export interface Story {
 }
 
 export interface NewsPost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   img: ImageSlot;
   inset: ImageSlot;
@@ -156,6 +162,8 @@ export interface Lesson {
 }
 
 export interface LessonsPost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   img: ImageSlot;
   /** Optional transparent PNG of the movie title, replacing the title text. */
@@ -179,11 +187,15 @@ export interface TimelineRow {
 }
 
 export interface TimelinePost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   rows: TimelineRow[];
 }
 
 export interface PosterPost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   img: ImageSlot;
   logo: ImageSlot;
@@ -196,6 +208,8 @@ export interface PosterPost {
 }
 
 export interface MemePost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   /** classic: text on the photo; caption: white bar above the photo. */
   mode: "classic" | "caption";
@@ -209,6 +223,8 @@ export interface MemePost {
 }
 
 export interface TweetPost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   theme: "dark" | "light";
   background: string;
@@ -229,6 +245,8 @@ export interface TweetPost {
 }
 
 export interface QuotePost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   img: ImageSlot;
   usePhoto: boolean;
@@ -240,6 +258,8 @@ export interface QuotePost {
 }
 
 export interface ComparePost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
   layout: "side" | "stack";
   headline: string;
@@ -306,6 +326,8 @@ export interface CustomPost {
 }
 
 export interface FollowPost {
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
   style: TextStyle;
 }
 
@@ -367,7 +389,17 @@ export interface Region {
   imgPath?: SlotPath;
   /** A canvas layer: dragging moves it (x/y at `path`), zooming resizes this field. */
   layer?: { id: string; resize: "size" | "w" };
+  /** A template's text block: dragging and zooming change `moves[key]` (the object at `path`). */
+  text?: { key: string };
 }
+
+/** How far a template's text block was dragged (fractions of the slide) and how much it was resized. */
+export interface TextMove {
+  dx: number;
+  dy: number;
+  s: number;
+}
+export type TextMoves = Record<string, TextMove>;
 
 export interface RenderState {
   brand: Brand;

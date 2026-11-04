@@ -1,7 +1,8 @@
 import type { Region, RenderState } from "@/types/post";
 import { watermark } from "./meme";
 import {
-  type Ctx, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, fitText, imageOf, montserrat, playfair, toks,
+  type Ctx, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, fitText, imageOf, linesBox, montserrat, movable, playfair, textBox,
+  toks,
 } from "./helpers";
 
 /** Big quote with author and source, on a darkened photo or a solid color. */
@@ -44,13 +45,17 @@ export function quote(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
 
   ctx.font = playfair(300);
   ctx.textAlign = "center";
-  ctx.fillStyle = accent;
-  ctx.fillText("“", W / 2, y + 225);
+  const markY = y;
+  movable(ctx, "mark", { x: W / 2 - 70, y: markY + 10, w: 140, h: 110 }, () => {
+    ctx.fillStyle = accent;
+    ctx.fillText("“", W / 2, markY + 225);
+  });
   y += markH + 34;
 
   ctx.save();
   const again = fitStyled(ctx, p.quote, p.style, W - 160, H * 0.5, lh, 84, 32);
-  drawLines(ctx, again, W / 2, y, lh, p.style.color, accent);
+  const textY = y;
+  movable(ctx, "quote", linesBox(again, W / 2, textY, lh), () => drawLines(ctx, again, W / 2, textY, lh, p.style.color, accent));
   ctx.restore();
   y += textH;
 
@@ -59,15 +64,19 @@ export function quote(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
     ctx.save();
     ctx.letterSpacing = "4px";
     ctx.font = montserrat(800, authorFit.size);
-    drawLines(ctx, authorFit, W / 2, y, 1, accent, accent);
+    const authorY = y;
+    movable(ctx, "author", linesBox(authorFit, W / 2, authorY, 1), () => drawLines(ctx, authorFit, W / 2, authorY, 1, accent, accent));
     ctx.restore();
     y += authorH;
   }
   if (sourceH) {
     ctx.font = archivo(500, 30);
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255,255,255,.7)";
-    ctx.fillText(p.source, W / 2, y + sourceH);
+    const sy = y + sourceH;
+    movable(ctx, "source", textBox(ctx, p.source, W / 2, sy, 30), () => {
+      ctx.fillStyle = "rgba(255,255,255,.7)";
+      ctx.fillText(p.source, W / 2, sy);
+    });
   }
   if (p.watermark) watermark(ctx, brand, frame);
   return regs;

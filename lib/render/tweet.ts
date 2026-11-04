@@ -1,6 +1,6 @@
 import type { Region, RenderState } from "@/types/post";
 import {
-  type Ctx, accentOf, archivo, blockH, drawAvatar, drawCover, drawLines, fitStyled, leadOf, imageOf, rrect, uploaded, verifiedBadge,
+  type Box, type Ctx, accentOf, archivo, blockH, drawAvatar, drawCover, drawLines, fitStyled, leadOf, imageOf, movable, rrect, uploaded, verifiedBadge,
 } from "./helpers";
 
 /** "9:41 PM · 1 Nov 2026" in the viewer's own locale, like a real post. */
@@ -56,57 +56,60 @@ export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
   const x0 = margin;
   const y0 = Math.max(margin, (H - cardH) / 2);
 
-  ctx.fillStyle = t.card;
-  rrect(ctx, x0, y0, cardW, cardH, 36);
-  ctx.fill();
-  ctx.strokeStyle = t.border;
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  // The whole card moves as one; its photo stays draggable where the card ends up.
+  const photo: Box[] = [];
+  const place = movable(ctx, "card", { x: x0, y: y0, w: cardW, h: cardH }, () => {
+    ctx.fillStyle = t.card;
+    rrect(ctx, x0, y0, cardW, cardH, 36);
+    ctx.fill();
+    ctx.strokeStyle = t.border;
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-  // header: avatar, name + badge, handle
-  const ax = x0 + pad + 60;
-  const ay = y0 + pad + 60;
-  drawAvatar(ctx, avatar, ax, ay, 60, p.theme === "dark" ? "#16181c" : "#eff3f4");
-  if (!uploaded(avatar)) {
-    ctx.font = archivo(700, 52);
-    ctx.textAlign = "center";
-    ctx.fillStyle = accentOf(brand, p.style);
-    ctx.fillText((name || "?").trim().charAt(0).toUpperCase(), ax, ay + 19);
-  }
-  const tx = x0 + pad + 144;
-  ctx.textAlign = "left";
-  ctx.font = archivo(700, 40);
-  ctx.fillStyle = t.name;
-  ctx.fillText(name, tx, y0 + pad + 50);
-  if (verified) verifiedBadge(ctx, tx + ctx.measureText(name).width + 9 + 25 * 0.66, y0 + pad + 36, 0.66);
-  ctx.font = archivo(400, 34);
-  ctx.fillStyle = t.muted;
-  ctx.fillText(handle, tx, y0 + pad + 100);
-
-  let y = y0 + pad + headerH + 36;
-  if (textH) {
-    ctx.save();
-    const again = fitStyled(ctx, p.text, p.style, innerW, avail - (imgH ? imgH + 30 : 0), lh, 60, 28);
-    drawLines(ctx, again, x0 + pad, y, lh, p.style.color, accentOf(brand, p.style), "left");
-    ctx.restore();
-    y += textH;
-  }
-  const regs: Region[] = [];
-  if (imgH) {
-    y += 30;
-    ctx.save();
-    rrect(ctx, x0 + pad, y, innerW, imgH, 24);
-    ctx.clip();
-    drawCover(ctx, imageOf(p.img), p.img, x0 + pad, y, innerW, imgH);
-    ctx.restore();
-    regs.push({ x: x0 + pad, y, w: innerW, h: imgH, path: ["posts", "tweet", "img"] });
-    y += imgH;
-  }
-  if (dateH) {
-    ctx.font = archivo(400, 30);
+    // header: avatar, name + badge, handle
+    const ax = x0 + pad + 60;
+    const ay = y0 + pad + 60;
+    drawAvatar(ctx, avatar, ax, ay, 60, p.theme === "dark" ? "#16181c" : "#eff3f4");
+    if (!uploaded(avatar)) {
+      ctx.font = archivo(700, 52);
+      ctx.textAlign = "center";
+      ctx.fillStyle = accentOf(brand, p.style);
+      ctx.fillText((name || "?").trim().charAt(0).toUpperCase(), ax, ay + 19);
+    }
+    const tx = x0 + pad + 144;
     ctx.textAlign = "left";
+    ctx.font = archivo(700, 40);
+    ctx.fillStyle = t.name;
+    ctx.fillText(name, tx, y0 + pad + 50);
+    if (verified) verifiedBadge(ctx, tx + ctx.measureText(name).width + 9 + 25 * 0.66, y0 + pad + 36, 0.66);
+    ctx.font = archivo(400, 34);
     ctx.fillStyle = t.muted;
-    ctx.fillText(date, x0 + pad, y + 30 + 26);
-  }
-  return regs;
+    ctx.fillText(handle, tx, y0 + pad + 100);
+
+    let y = y0 + pad + headerH + 36;
+    if (textH) {
+      ctx.save();
+      const again = fitStyled(ctx, p.text, p.style, innerW, avail - (imgH ? imgH + 30 : 0), lh, 60, 28);
+      drawLines(ctx, again, x0 + pad, y, lh, p.style.color, accentOf(brand, p.style), "left");
+      ctx.restore();
+      y += textH;
+    }
+    if (imgH) {
+      y += 30;
+      ctx.save();
+      rrect(ctx, x0 + pad, y, innerW, imgH, 24);
+      ctx.clip();
+      drawCover(ctx, imageOf(p.img), p.img, x0 + pad, y, innerW, imgH);
+      ctx.restore();
+      photo.push({ x: x0 + pad, y, w: innerW, h: imgH });
+      y += imgH;
+    }
+    if (dateH) {
+      ctx.font = archivo(400, 30);
+      ctx.textAlign = "left";
+      ctx.fillStyle = t.muted;
+      ctx.fillText(date, x0 + pad, y + 30 + 26);
+    }
+  });
+  return photo.map((b) => ({ ...place(b), path: ["posts", "tweet", "img"] }));
 }

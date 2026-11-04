@@ -1,5 +1,6 @@
 import type { Posts, SlideKind, StyledKey } from "@/types/post";
 import { toastUndo } from "@/lib/history";
+import { POST_OF } from "@/lib/render";
 import { useEditor, useSlides } from "@/lib/store";
 import { templateInfo } from "@/lib/templates";
 import LegalLinks from "./LegalLinks";
@@ -67,6 +68,7 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
     <>
       <PanelHeader title={TITLES[k]}>{slides.length > 1 && <SlideCount sel={sel} total={slides.length} />}</PanelHeader>
       <Note>{templateInfo(fmt).howto}</Note>
+      {k !== "custom" && <TextPositions post={POST_OF[k]} />}
       {(k === "hlCover" || k === "hlClean") && <HeadlinePanel slide={slide} />}
       {(k === "listCover" || k === "listItem") && <ListPanel slide={slide} />}
       {(k === "newsCover" || k === "newsStory") && <NewsPanel slide={slide} />}
@@ -98,6 +100,30 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
       </div>
       <LegalLinks />
     </>
+  );
+}
+
+/** Says text can be dragged, and puts it all back once something was moved. */
+function TextPositions({ post }: { post: (typeof POST_OF)[keyof typeof POST_OF] }) {
+  const moved = useEditor((s) => Object.keys(s.posts[post].moves ?? {}).length > 0);
+  const update = useEditor((s) => s.update);
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-dashed border-line px-3 py-2.5">
+      <span aria-hidden className="text-base leading-none">✥</span>
+      <p className="m-0 flex-1 text-[12.5px] leading-snug text-muted">Drag any text on the post to move it. Pinch or scroll on it to resize.</p>
+      {moved && (
+        <button
+          type="button"
+          className="btn btn-small flex-none"
+          onClick={() => {
+            update(["posts", post], { moves: undefined });
+            toastUndo("Text is back in its original place.");
+          }}
+        >
+          Reset
+        </button>
+      )}
+    </div>
   );
 }
 

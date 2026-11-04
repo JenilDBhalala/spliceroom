@@ -1,7 +1,7 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import {
-  type Ctx, type Wrapped, accentOf, blockH, drawCover, drawLines, fadeBottom, fontFace, imageOf, montserrat, shadowOff, shadowOn, swipeTag, toks,
-  wrap,
+  type Ctx, type Wrapped, accentOf, blockH, drawCover, drawLines, fadeBottom, fontFace, imageOf, montserrat, movable, shadowOff, shadowOn, swipeTag,
+  toks, wrap,
 } from "./helpers";
 
 export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -63,15 +63,17 @@ export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Regio
     sizes = sizes.map((s) => s * f);
     total = maxH;
   }
-  let y = H - 105 - total;
-  ctx.fillStyle = st.color;
-  ctx.textAlign = "center";
-  lines.forEach((l, i) => {
-    ctx.letterSpacing = spacing(sizes[i]);
-    ctx.font = fontFace(st.font, sizes[i], st.weight);
-    y += sizes[i] * 0.73;
-    ctx.fillText(l, W / 2, y);
-    y += gap;
+  movable(ctx, "text", { x: 75, y: H - 105 - total, w: maxW, h: total + 20 }, () => {
+    let y = H - 105 - total;
+    ctx.fillStyle = st.color;
+    ctx.textAlign = "center";
+    lines.forEach((l, i) => {
+      ctx.letterSpacing = spacing(sizes[i]);
+      ctx.font = fontFace(st.font, sizes[i], st.weight);
+      y += sizes[i] * 0.73;
+      ctx.fillText(l, W / 2, y);
+      y += gap;
+    });
   });
   ctx.restore();
   if (p.swipe) swipeTag(ctx, accentOf(brand, st), "SWIPE", W - 70, H - 42);
@@ -106,10 +108,14 @@ export function newsStory(ctx: Ctx, { brand, posts, frame }: RenderState, sl: Sl
     if (!fits.some((f) => f.over) && totalH() <= maxH) break;
   }
   // Like the reference, an overflowing text ends the loop one step below the minimum.
-  let y = H * 0.735 + (maxH - totalH()) / 2 + 10;
-  fits.forEach((f) => {
-    drawLines(ctx, f, W / 2, y, lh, "#fff", accentOf(brand, posts.news.style));
-    y += blockH(f.lines.length, size, lh) + size * 0.95;
+  const y0 = H * 0.735 + (maxH - totalH()) / 2 + 10;
+  const bodyW = Math.max(0, ...fits.flatMap((f) => f.lines.map((L) => L.w)));
+  movable(ctx, "text", { x: W / 2 - bodyW / 2, y: y0, w: bodyW, h: totalH() + size * 0.22 }, () => {
+    let y = y0;
+    fits.forEach((f) => {
+      drawLines(ctx, f, W / 2, y, lh, "#fff", accentOf(brand, posts.news.style));
+      y += blockH(f.lines.length, size, lh) + size * 0.95;
+    });
   });
   return [{ x: 0, y: 0, w: W, h: H * 0.74, path: ["posts", "news", "stories", i, "img"] }];
 }

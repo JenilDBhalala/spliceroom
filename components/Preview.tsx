@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Framing, ImageSlot, Region } from "@/types/post";
+import type { Framing, ImageSlot, Region, TextMove, TextMoves } from "@/types/post";
 import { renderSlide } from "@/lib/render";
 import { imageOf, overflow } from "@/lib/render/helpers";
 import { getIn, loadFileInto, useEditor, useRenderState, useSlides } from "@/lib/store";
@@ -9,13 +9,16 @@ type Pt = { x: number; y: number };
 
 /** Screen pixels a pointer must travel before a press counts as a drag. */
 const TAP_SLOP = 6;
+/** Template text snaps back into its original column or row within this fraction of the slide. */
+const SNAP = 0.012;
 
 /**
  * The big slide preview: drag a photo to reposition it, scroll or pinch to zoom,
  * drop or paste an image into it. `fit` sizes it to fill its container (a size container).
- * `onLayerTap` fires when a canvas layer is tapped (released without dragging).
+ * Template text blocks can be dragged and resized the same way.
+ * `onItemTap` fires when a canvas layer or text block is tapped (released without dragging).
  */
-export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; onLayerTap?: (id: string) => void }) {
+export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onItemTap?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const regionsRef = useRef<Region[]>([]);
   // Active pointers (canvas units) and the gesture they drive: one finger drags, two pinch.
@@ -30,12 +33,17 @@ export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; on
     start: { x: number; y: number };
     moved: boolean;
     pinch?: { dist: number; value: number };
+    /** Text drags track the unsnapped position, so snapping never sticks. */
+    raw?: { dx: number; dy: number };
   } | null>(null);
   const [grab, setGrab] = useState(false);
   const [dragging, setDragging] = useState(false);
-  // Outline of the selected blank-canvas layer, in layout units.
+  // Outline of the selected blank-canvas layer or template text block, in layout units.
   const [selBox, setSelBox] = useState<Region | null>(null);
   const layerSel = useEditor((s) => (s.fmt === "custom" ? s.layerSel : null));
+  const [textSel, setTextSel] = useState<string | null>(null);
+  // Guide lines while a text block sits snapped on its original column (v) or row (h).
+  const [guides, setGuides] = useState<{ v: boolean; h: boolean }>({ v: false, h: false });
   const state = useRenderState();
   const { W, H } = state.frame;
   const frameRef = useRef(state.frame);
@@ -76,30 +84,40 @@ export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; on
       }
       regionsRef.current = renderSlide(ctx, state, slide, pxWidth / W);
       setGrab(regionsRef.current.length > 0);
-      setSelBox(regionsRef.current.find((r) => r.layer && r.layer.id === layerSel) ?? null);
+      setSelBox(regionsRef.current.find((r) => (r.layer && r.layer.id === layerSel) || (r.text && r.text.key === textSel)) ?? null);
     });
     return () => cancelAnimationFrame(raf);
-  }, [state, slide, tick, pxWidth, W, H, layerSel]);
+  }, [state, slide, tick, pxWidth, W, H, layerSel, textSel]);
 
   const toCanvas = (e: { clientX: number; clientY: number }, rect?: DOMRect): Pt => {
     const r = rect ?? canvasRef.current!.getBoundingClientRect();
     const f = frameRef.current;
     return { x: ((e.clientX - r.left) * f.W) / r.width, y: ((e.clientY - r.top) * f.H) / r.height };
   };
-  const hit = ({ x, y }: Pt) => [...regionsRef.current].reverse().find((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
-  // A region's "size": photo zoom, or for canvas layers the font size (text) or width (photo).
+  // Canvas layers stack in order (front wins); in templates the smallest thing under the pointer wins,
+  // so text and inset photos can be grabbed on top of a full-slide photo.
+  const hit = ({ x, y }: Pt) => {
+    const hits = regionsRef.current.filter((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
+    if (hits.some((r) => r.layer)) return hits[hits.length - 1];
+    return hits.sort((a, b) => a.w * a.h - b.w * b.h)[0];
+  };
+  const moveOf = (reg: Region): TextMove => getIn<TextMoves | undefined>(useEditor.getState(), reg.path)?.[reg.text!.key] ?? { dx: 0, dy: 0, s: 1 };
+  // A region's "size": photo zoom, text block scale, or for canvas layers the font size (text) or width (photo).
   const scaleOf = (reg: Region) => {
+    if (reg.text) return moveOf(reg).s;
     const o = getIn<Record<string, number>>(useEditor.getState(), reg.path);
     return reg.layer ? o[reg.layer.resize] : o.zoom;
   };
   const setScale = (reg: Region, v: number) => {
     const { update } = useEditor.getState();
+    if (reg.text) return update(reg.path, { [reg.text.key]: { ...moveOf(reg), s: Math.max(0.3, Math.min(3, v)) } });
     if (!reg.layer) return update(reg.path, { zoom: Math.max(1, Math.min(3, v)) });
     const [lo, hi] = reg.layer.resize === "size" ? [10, 420] : [0.05, 1.2];
     update(reg.path, { [reg.layer.resize]: Math.max(lo, Math.min(hi, v)) });
   };
-  /** Where a dropped or pasted image goes for a region (null for text layers). */
+  /** Where a dropped or pasted image goes for a region (null for text). */
   const imageTarget = (reg: Region) => {
+    if (reg.text) return null;
     if (!reg.layer) return reg.imgPath ?? reg.path;
     return reg.layer.resize === "w" ? [...reg.path, "img"] : null;
   };
@@ -119,6 +137,8 @@ export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; on
     };
     cv.addEventListener("wheel", onWheel, { passive: false });
     return () => cv.removeEventListener("wheel", onWheel);
+    // Bound once: the helpers read the latest state from the store and refs on every call.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Canvas layers: arrow keys nudge (Shift for bigger steps), Delete removes, Escape deselects.
@@ -153,7 +173,7 @@ export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; on
       if (!item) return;
       e.preventDefault();
       const { activeSlot, showToast } = useEditor.getState();
-      const first = regionsRef.current[0];
+      const first = regionsRef.current.find((r) => !r.text);
       const target = activeSlot ?? (first && imageTarget(first));
       if (!target) return showToast("Tap a photo box first, then paste.");
       loadFileInto(target, item.getAsFile());
@@ -173,7 +193,8 @@ export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; on
     } else if (pointers.current.size === 0) {
       gesture.current = null;
       setDragging(false);
-      if (g.reg.layer && !g.moved) onLayerTap?.(g.reg.layer.id);
+      setGuides({ v: false, h: false });
+      if ((g.reg.layer || g.reg.text) && !g.moved) onItemTap?.();
     }
   };
 
@@ -193,6 +214,7 @@ export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; on
             const reg = hit(pt);
             const st = useEditor.getState();
             if (st.fmt === "custom") st.setLayerSel(reg?.layer?.id ?? null);
+            setTextSel(reg?.text?.key ?? null);
             if (!reg) return;
             gesture.current = { reg, last: pt, rect, start: { x: e.clientX, y: e.clientY }, moved: false };
             setDragging(true);
@@ -219,6 +241,20 @@ export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; on
             return;
           }
           const st = useEditor.getState();
+          if (g.reg.text) {
+            const f = frameRef.current;
+            const m = moveOf(g.reg);
+            const raw = (g.raw ??= { dx: m.dx, dy: m.dy });
+            raw.dx += (pt.x - g.last.x) / f.W;
+            raw.dy += (pt.y - g.last.y) / f.H;
+            const snap = (v: number) => (Math.abs(v) < SNAP ? 0 : v);
+            const dx = Math.max(-1, Math.min(1, snap(raw.dx)));
+            const dy = Math.max(-1, Math.min(1, snap(raw.dy)));
+            setGuides({ v: dx === 0, h: dy === 0 });
+            st.update(g.reg.path, { [g.reg.text.key]: { ...m, dx, dy } });
+            g.last = pt;
+            return;
+          }
           if (g.reg.layer) {
             const l = getIn<{ x: number; y: number }>(st, g.reg.path);
             const f = frameRef.current;
@@ -250,6 +286,12 @@ export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; on
           if (target) loadFileInto(target, e.dataTransfer.files[0]);
         }}
       />
+      {dragging && selBox?.text && guides.v && (
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 w-px bg-accent/80" style={{ left: `${((selBox.x + selBox.w / 2) / W) * 100}%` }} />
+      )}
+      {dragging && selBox?.text && guides.h && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 h-px bg-accent/80" style={{ top: `${((selBox.y + selBox.h / 2) / H) * 100}%` }} />
+      )}
       {selBox && (
         <div
           aria-hidden

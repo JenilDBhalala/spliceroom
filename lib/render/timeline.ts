@@ -1,6 +1,6 @@
 import type { Region, RenderState } from "@/types/post";
 import {
-  type Ctx, blockH, drawContain, drawCover, fitStyled, leadOf, fontFace, imageOf, montserrat, shadowOff, shadowOn, uploaded,
+  type Ctx, blockH, drawContain, drawCover, fitStyled, leadOf, fontFace, imageOf, montserrat, movable, shadowOff, shadowOn, textBox, uploaded,
 } from "./helpers";
 
 export function timeline(ctx: Ctx, { posts, frame }: RenderState): Region[] {
@@ -27,29 +27,35 @@ export function timeline(ctx: Ctx, { posts, frame }: RenderState): Region[] {
     shadowOn(ctx, 20);
     const logo = uploaded(r.logo);
     if (logo) {
-      drawContain(ctx, logo, 50 + 175, cy, 350, rh * 0.55);
+      const sc = Math.min(350 / logo.naturalWidth, (rh * 0.55) / logo.naturalHeight);
+      const [w, h] = [logo.naturalWidth * sc, logo.naturalHeight * sc];
+      movable(ctx, `title${i}`, { x: 225 - w / 2, y: cy - h / 2, w, h }, () => drawContain(ctx, logo, 50 + 175, cy, 350, rh * 0.55));
     } else {
       const lh = leadOf(style, 1.0);
       ctx.save();
       const fit = fitStyled(ctx, r.title, style, 380, rh * 0.55, lh, 64, 20);
       const left = 60;
-      fit.lines.forEach((L, li) => {
+      const bh = blockH(fit.lines.length, fit.size, lh);
+      const tw = Math.max(0, ...fit.lines.map((L) => L.w));
+      movable(ctx, `title${i}`, { x: left, y: cy - bh / 2, w: tw, h: bh + fit.size * 0.22 }, () => fit.lines.forEach((L, li) => {
         ctx.font = fontFace(style.font, fit.size, style.weight);
         ctx.textAlign = "left";
         ctx.fillStyle = style.color;
         ctx.fillText(
           L.words.map((w) => w.t).join(" "),
           left,
-          cy - blockH(fit.lines.length, fit.size, lh) / 2 + fit.size * 0.74 + li * fit.size * lh,
+          cy - bh / 2 + fit.size * 0.74 + li * fit.size * lh,
         );
-      });
+      }));
       ctx.restore();
     }
     const ys = Math.min(100, rh * 0.28);
     ctx.font = montserrat(900, ys);
     ctx.textAlign = "right";
-    ctx.fillStyle = "#fff";
-    ctx.fillText(r.year || "", W - 50, cy + ys * 0.36);
+    movable(ctx, `year${i}`, textBox(ctx, r.year || "", W - 50, cy + ys * 0.36, ys), () => {
+      ctx.fillStyle = "#fff";
+      ctx.fillText(r.year || "", W - 50, cy + ys * 0.36);
+    });
     shadowOff(ctx);
     if (i) {
       ctx.fillStyle = "#000";

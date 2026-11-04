@@ -1,5 +1,7 @@
 import type { Brand, Frame, Region, RenderState } from "@/types/post";
-import { type Ctx, type Wrapped, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, imageOf, shadowOff, shadowOn } from "./helpers";
+import {
+  type Ctx, type Wrapped, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, imageOf, linesBox, movable, shadowOff, shadowOn, textBox,
+} from "./helpers";
 
 export function meme(ctx: Ctx, state: RenderState): Region[] {
   return state.posts.meme.mode === "caption" ? captionMeme(ctx, state) : classicMeme(ctx, state);
@@ -16,13 +18,14 @@ function classicMeme(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
   if (p.top.trim()) {
     ctx.save();
     const fit = fitStyled(ctx, p.top, p.style, W - 80, maxH, lh, 120, 36);
-    drawOutlined(ctx, fit, W / 2, 46, lh, p.style.color, accent);
+    movable(ctx, "top", linesBox(fit, W / 2, 46, lh), () => drawOutlined(ctx, fit, W / 2, 46, lh, p.style.color, accent));
     ctx.restore();
   }
   if (p.bottom.trim()) {
     ctx.save();
     const fit = fitStyled(ctx, p.bottom, p.style, W - 80, maxH, lh, 120, 36);
-    drawOutlined(ctx, fit, W / 2, H - 46 - blockH(fit.lines.length, fit.size, lh), lh, p.style.color, accent);
+    const top = H - 46 - blockH(fit.lines.length, fit.size, lh);
+    movable(ctx, "bottom", linesBox(fit, W / 2, top, lh), () => drawOutlined(ctx, fit, W / 2, top, lh, p.style.color, accent));
     ctx.restore();
   }
   if (p.watermark) watermark(ctx, brand, frame);
@@ -41,7 +44,7 @@ function captionMeme(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
   const barH = p.caption.trim() ? blockH(fit.lines.length, fit.size, lh) + padY * 2 : 0;
   ctx.fillStyle = p.bar === "dark" ? "#000" : "#fff";
   ctx.fillRect(0, 0, W, barH);
-  if (barH) drawLines(ctx, fit, padX, padY, lh, p.style.color, accentOf(brand, p.style), "left");
+  if (barH) movable(ctx, "caption", linesBox(fit, padX, padY, lh, "left"), () => drawLines(ctx, fit, padX, padY, lh, p.style.color, accentOf(brand, p.style), "left"));
   ctx.restore();
   drawCover(ctx, imageOf(p.img), p.img, 0, barH, W, H - barH);
   if (p.watermark) watermark(ctx, brand, frame);
@@ -70,10 +73,13 @@ function drawOutlined(ctx: Ctx, res: Wrapped, cx: number, top: number, lh: numbe
 /** Small page handle in the bottom-right corner. */
 export function watermark(ctx: Ctx, brand: Brand, { W, H }: Frame) {
   if (!brand.name) return;
+  const text = `@${brand.name}`;
   ctx.font = archivo(600, 28);
   ctx.textAlign = "right";
-  ctx.fillStyle = "rgba(255,255,255,.75)";
-  shadowOn(ctx, 8);
-  ctx.fillText(`@${brand.name}`, W - 28, H - 28);
-  shadowOff(ctx);
+  movable(ctx, "watermark", textBox(ctx, text, W - 28, H - 28, 28), () => {
+    ctx.fillStyle = "rgba(255,255,255,.75)";
+    shadowOn(ctx, 8);
+    ctx.fillText(text, W - 28, H - 28);
+    shadowOff(ctx);
+  });
 }

@@ -1,8 +1,8 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import { brandMark } from "./headline";
 import {
-  type Ctx, type Wrapped, accentOf, anton, archivo, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, fitText, imageOf, montserrat,
-  shadowOff, shadowOn, swipeTag, toks, uploaded, wrap,
+  type Ctx, type Wrapped, accentOf, anton, archivo, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, fitText, imageOf, linesBox, montserrat,
+  movable, shadowOff, shadowOn, swipeTag, textBox, toks, uploaded, wrap,
 } from "./helpers";
 
 export function lessonsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -21,16 +21,18 @@ export function lessonsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Re
     const sc = Math.min(760 / logo.naturalWidth, 260 / logo.naturalHeight);
     const w = logo.naturalWidth * sc;
     const h = logo.naturalHeight * sc;
-    titleTop = titleBottom - h;
-    shadowOn(ctx, 24);
-    ctx.drawImage(logo, W / 2 - w / 2, titleTop, w, h);
-    shadowOff(ctx);
+    const top = (titleTop = titleBottom - h);
+    movable(ctx, "title", { x: W / 2 - w / 2, y: top, w, h }, () => {
+      shadowOn(ctx, 24);
+      ctx.drawImage(logo, W / 2 - w / 2, top, w, h);
+      shadowOff(ctx);
+    });
   } else {
     const lh = leadOf(p.style, 1.0);
     ctx.save();
     const fit = fitStyled(ctx, p.title, p.style, W - 120, H * 0.24, lh, 150, 44);
-    titleTop = titleBottom - blockH(fit.lines.length, fit.size, lh);
-    drawLines(ctx, fit, W / 2, titleTop, lh, p.style.color, accent);
+    const top = (titleTop = titleBottom - blockH(fit.lines.length, fit.size, lh));
+    movable(ctx, "title", linesBox(fit, W / 2, top, lh), () => drawLines(ctx, fit, W / 2, top, lh, p.style.color, accent));
     ctx.restore();
   }
 
@@ -40,7 +42,8 @@ export function lessonsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Re
     const lh = 1.2;
     const fit = fitText(ctx, toks(p.kicker), (s) => montserrat(800, s), W - 160, 120, lh, 44, 24);
     const kh = blockH(fit.lines.length, fit.size, lh);
-    drawLines(ctx, fit, W / 2, titleTop - 38 - kh, lh, accent, p.style.color);
+    const top = titleTop - 38 - kh;
+    movable(ctx, "kicker", linesBox(fit, W / 2, top, lh), () => drawLines(ctx, fit, W / 2, top, lh, accent, p.style.color));
     ctx.restore();
   }
 
@@ -68,12 +71,16 @@ export function lessonItem(ctx: Ctx, { brand, posts, frame }: RenderState, sl: S
   if (p.numbers !== "off") {
     const size = p.numbers === "large" ? 170 : 110;
     const baseline = photoH + 40 * (size / 170);
-    shadowOn(ctx, 20);
+    const num = String(i + 1).padStart(2, "0");
+    const nx = left - 4 * (size / 170);
     ctx.font = anton(size);
     ctx.textAlign = "left";
-    ctx.fillStyle = accent;
-    ctx.fillText(String(i + 1).padStart(2, "0"), left - 4 * (size / 170), baseline);
-    shadowOff(ctx);
+    movable(ctx, "number", textBox(ctx, num, nx, baseline, size), () => {
+      shadowOn(ctx, 20);
+      ctx.fillStyle = accent;
+      ctx.fillText(num, nx, baseline);
+      shadowOff(ctx);
+    });
     y = baseline + 40;
   }
 
@@ -82,7 +89,8 @@ export function lessonItem(ctx: Ctx, { brand, posts, frame }: RenderState, sl: S
   const tlh = leadOf(p.style, 1.04);
   ctx.save();
   const title = fitStyled(ctx, ls.title, p.style, maxW, 180, tlh, 76, 36);
-  drawLines(ctx, title, left, y, tlh, p.style.color, accent, "left");
+  const titleY = y;
+  movable(ctx, "title", linesBox(title, left, titleY, tlh, "left"), () => drawLines(ctx, title, left, titleY, tlh, p.style.color, accent, "left"));
   ctx.restore();
   y += blockH(title.lines.length, title.size, tlh) + 30;
 
@@ -91,14 +99,20 @@ export function lessonItem(ctx: Ctx, { brand, posts, frame }: RenderState, sl: S
   drawBody(ctx, paras, left, y, maxW, footerY - 50 - y, blh, accent);
 
   // Footer: page name left, progress right.
+  const page = (brand.name || "").toLowerCase();
   ctx.font = montserrat(900, 30);
   ctx.textAlign = "left";
-  ctx.fillStyle = accent;
-  ctx.fillText((brand.name || "").toLowerCase(), left, footerY);
+  movable(ctx, "page", textBox(ctx, page, left, footerY, 30), () => {
+    ctx.fillStyle = accent;
+    ctx.fillText(page, left, footerY);
+  });
+  const progress = `${String(i + 1).padStart(2, "0")} / ${String(p.lessons.length).padStart(2, "0")}`;
   ctx.font = montserrat(800, 26);
   ctx.textAlign = "right";
-  ctx.fillStyle = "rgba(255,255,255,.55)";
-  ctx.fillText(`${String(i + 1).padStart(2, "0")} / ${String(p.lessons.length).padStart(2, "0")}`, W - left, footerY);
+  movable(ctx, "progress", textBox(ctx, progress, W - left, footerY, 26), () => {
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    ctx.fillText(progress, W - left, footerY);
+  });
 
   return [{ x: 0, y: 0, w: W, h: photoH, path: ["posts", "lessons", "lessons", i, "img"] }];
 }

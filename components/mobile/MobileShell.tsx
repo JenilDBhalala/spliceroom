@@ -92,8 +92,8 @@ export default function MobileShell() {
 
       <main className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 items-center justify-center p-2.5 [container-type:size]">
-          {/* Tapping a canvas layer opens its settings once the finger lifts; dragging doesn't. */}
-          <Preview fit onLayerTap={() => setTab("edit")} />
+          {/* Tapping a layer or text opens its settings once the finger lifts; dragging doesn't. */}
+          <Preview fit onItemTap={() => setTab("edit")} />
         </div>
         {/* The strip hides while a sheet is open so the preview keeps its room. */}
         {!tab && (slides.length > 1 || fmt === "list" || fmt === "news" || fmt === "lessons") ? (

@@ -1,24 +1,31 @@
 import type { Brand, Region, RenderState } from "@/types/post";
 import {
-  type Ctx, accentOf, bebas, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, imageOf, montserrat, shadowOff, shadowOn, uploaded,
+  type Ctx, accentOf, bebas, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, imageOf, linesBox, montserrat, movable, shadowOff, shadowOn,
+  textBox, uploaded,
 } from "./helpers";
 
 /** Page logo, or the page name in the accent color, top left. */
 export function brandMark(ctx: Ctx, brand: Brand) {
   const logo = uploaded(brand.logo);
   if (logo) {
-    shadowOn(ctx, 18);
     const sc = Math.min(300 / logo.naturalWidth, 86 / logo.naturalHeight);
-    ctx.drawImage(logo, 64, 70, logo.naturalWidth * sc, logo.naturalHeight * sc);
-    shadowOff(ctx);
+    const [w, h] = [logo.naturalWidth * sc, logo.naturalHeight * sc];
+    movable(ctx, "brand", { x: 64, y: 70, w, h }, () => {
+      shadowOn(ctx, 18);
+      ctx.drawImage(logo, 64, 70, w, h);
+      shadowOff(ctx);
+    });
     return;
   }
+  const name = (brand.name || "").toLowerCase();
   ctx.font = montserrat(900, 64);
   ctx.textAlign = "left";
-  shadowOn(ctx, 18);
-  ctx.fillStyle = brand.accent;
-  ctx.fillText((brand.name || "").toLowerCase(), 64, 134);
-  shadowOff(ctx);
+  movable(ctx, "brand", textBox(ctx, name, 64, 134, 64), () => {
+    shadowOn(ctx, 18);
+    ctx.fillStyle = brand.accent;
+    ctx.fillText(name, 64, 134);
+    shadowOff(ctx);
+  });
 }
 
 export function hlCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -28,31 +35,38 @@ export function hlCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[
   fadeBottom(ctx, frame, H * 0.5, H * 0.71);
   if (p.logo) brandMark(ctx, brand);
   if (p.swipe) {
-    shadowOn(ctx, 16);
     ctx.font = bebas(62);
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#fff";
-    ctx.fillText("SWIPE LEFT", W - 150, 136);
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 5;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(W - 66, 112);
-    ctx.lineTo(W - 126, 112);
-    ctx.moveTo(W - 108, 94);
-    ctx.lineTo(W - 126, 112);
-    ctx.lineTo(W - 108, 130);
-    ctx.stroke();
-    shadowOff(ctx);
+    const tw = ctx.measureText("SWIPE LEFT").width;
+    movable(ctx, "swipe", { x: W - 150 - tw, y: 86, w: tw + 84, h: 60 }, () => swipeLeft(ctx, W));
   }
   const lh = leadOf(p.style, 1.1);
   ctx.save();
   const fit = fitStyled(ctx, p.text, p.style, W - 150, H * 0.27, lh, 96, 34);
   const top = H * 0.715 + (H * 0.27 - blockH(fit.lines.length, fit.size, lh)) / 2;
-  drawLines(ctx, fit, W / 2, top, lh, p.style.color, accentOf(brand, p.style));
+  movable(ctx, "text", linesBox(fit, W / 2, top, lh), () => drawLines(ctx, fit, W / 2, top, lh, p.style.color, accentOf(brand, p.style)));
   ctx.restore();
   return [{ x: 0, y: 0, w: W, h: H, path: ["posts", "headline", "img"] }];
+}
+
+/** "SWIPE LEFT" with an arrow, top right. */
+function swipeLeft(ctx: Ctx, W: number) {
+  shadowOn(ctx, 16);
+  ctx.font = bebas(62);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("SWIPE LEFT", W - 150, 136);
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(W - 66, 112);
+  ctx.lineTo(W - 126, 112);
+  ctx.moveTo(W - 108, 94);
+  ctx.lineTo(W - 126, 112);
+  ctx.lineTo(W - 108, 130);
+  ctx.stroke();
+  shadowOff(ctx);
 }
 
 export function hlClean(ctx: Ctx, { posts, frame }: RenderState): Region[] {

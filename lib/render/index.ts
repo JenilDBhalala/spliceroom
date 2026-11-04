@@ -1,5 +1,5 @@
 import type { FormatId, Posts, Region, RenderState, Slide, SlideKind } from "@/types/post";
-import type { Ctx } from "./helpers";
+import { type Ctx, beginMoves, endMoves } from "./helpers";
 import { hlClean, hlCover } from "./headline";
 import { listCover, listItem } from "./list";
 import { newsCover, newsStory } from "./news";
@@ -21,6 +21,13 @@ const RENDERERS: Record<SlideKind, Renderer> = {
   custom,
   hlCover, hlClean, listCover, listItem, newsCover, newsStory, lessonsCover, lessonItem, timeline, poster, meme, tweet, quote, compare,
   follow,
+};
+
+/** The post whose text moves each slide kind uses (the blank canvas has layers instead). */
+export const POST_OF: Record<Exclude<SlideKind, "custom">, Exclude<keyof Posts, "custom">> = {
+  hlCover: "headline", hlClean: "headline", listCover: "list", listItem: "list", newsCover: "news", newsStory: "news",
+  lessonsCover: "lessons", lessonItem: "lessons", timeline: "timeline", poster: "poster", meme: "meme", tweet: "tweet",
+  quote: "quote", compare: "compare", follow: "follow",
 };
 
 /** Single-slide templates: slide kind and strip label. */
@@ -68,7 +75,7 @@ export function slidesFor(fmt: FormatId, posts: Posts): Slide[] {
 }
 
 /**
- * Draws one slide and returns its draggable photo regions (in layout units, 1080 wide).
+ * Draws one slide and returns its draggable regions (in layout units, 1080 wide): photos, then text blocks.
  * `scale` maps the layout onto the canvas: a 2160px-wide canvas uses 2,
  * so text and shapes are drawn at full resolution instead of being stretched.
  */
@@ -83,11 +90,16 @@ export function renderSlide(ctx: Ctx, state: RenderState, slide: Slide, scale = 
   ctx.fillRect(0, 0, state.frame.W, state.frame.H);
   ctx.textBaseline = "alphabetic";
   let regs: Region[] = [];
+  if (slide.kind !== "custom") {
+    const post = POST_OF[slide.kind];
+    beginMoves(state.posts[post].moves, ["posts", post, "moves"], slide.kind, state.frame);
+  }
   try {
     regs = RENDERERS[slide.kind](ctx, state, slide) || [];
   } catch (e) {
     console.error(e);
   }
+  const text = endMoves();
   ctx.restore();
-  return regs;
+  return [...regs, ...text];
 }

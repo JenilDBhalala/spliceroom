@@ -1,4 +1,4 @@
-import type { Brand, Frame, Framing, ImageSlot, PostSize, TextStyle } from "@/types/post";
+import type { Brand, Frame, Framing, ImageSlot, PostSize, Region, SlotPath, TextMoves, TextStyle } from "@/types/post";
 import { imageFor } from "@/lib/images";
 import { F, fontFace } from "./fonts";
 import { placeholderImage } from "./placeholder";
@@ -22,6 +22,77 @@ export const cinzel = (size: number) => `700 ${size}px ${F.cinzel}, Georgia, ser
 export const playfair = (size: number) => `700 ${size}px ${F.playfair}, Georgia, serif`;
 
 export { fontFace } from "./fonts";
+
+/* ---------- movable text blocks ---------- */
+
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+// Set by renderSlide around each slide: where text moves live and where to report text regions.
+let moving: { moves: TextMoves; path: SlotPath; prefix: string; frame: Frame; regions: Region[] } | null = null;
+
+export function beginMoves(moves: TextMoves | undefined, path: SlotPath, prefix: string, frame: Frame) {
+  moving = { moves: moves ?? {}, path, prefix, frame, regions: [] };
+}
+
+/** Text regions drawn since beginMoves. */
+export function endMoves(): Region[] {
+  const r = moving?.regions ?? [];
+  moving = null;
+  return r;
+}
+
+/**
+ * Draws a template text block (laid out in `box`) shifted and scaled by the user's move for `key`,
+ * and reports it as a draggable region. Keys are per slide kind, so moving a lesson's title moves it on every lesson.
+ * Returns where a box inside the block ends up (for photo regions inside a moved card).
+ */
+export function movable(ctx: Ctx, key: string, box: Box, draw: () => void): (b: Box) => Box {
+  if (!moving) {
+    draw();
+    return (b) => b;
+  }
+  const k = `${moving.prefix}.${key}`;
+  const m = moving.moves[k];
+  const { W, H } = moving.frame;
+  const s = m?.s ?? 1;
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  const dx = (m?.dx ?? 0) * W;
+  const dy = (m?.dy ?? 0) * H;
+  ctx.save();
+  if (m) {
+    ctx.translate(cx + dx, cy + dy);
+    ctx.scale(s, s);
+    ctx.translate(-cx, -cy);
+  }
+  draw();
+  ctx.restore();
+  // A little slack around the text makes it easier to grab.
+  const pad = 16;
+  const w = box.w * s + pad * 2;
+  const h = box.h * s + pad * 2;
+  moving.regions.push({ x: cx + dx - w / 2, y: cy + dy - h / 2, w, h, path: moving.path, text: { key: k } });
+  return (b) => ({ x: cx + dx + (b.x - cx) * s, y: cy + dy + (b.y - cy) * s, w: b.w * s, h: b.h * s });
+}
+
+/** The box wrapped lines cover when drawn with drawLines at (x0, top). */
+export function linesBox(res: Wrapped, x0: number, top: number, lh: number, align: "center" | "left" = "center"): Box {
+  const w = Math.max(0, ...res.lines.map((L) => L.w));
+  return { x: align === "left" ? x0 : x0 - w / 2, y: top, w, h: blockH(res.lines.length, res.size, lh) + res.size * 0.22 };
+}
+
+/** The box of one line of text drawn at baseline (x, y) with the current font and textAlign. */
+export function textBox(ctx: Ctx, text: string, x: number, y: number, size: number): Box {
+  const w = ctx.measureText(text).width;
+  const a = ctx.textAlign;
+  const x0 = a === "center" ? x - w / 2 : a === "right" || a === "end" ? x - w : x;
+  return { x: x0, y: y - size * 0.8, w, h: size };
+}
 
 /* ---------- template text style ---------- */
 
@@ -279,6 +350,8 @@ export function drawAvatar(ctx: Ctx, slot: ImageSlot, cx: number, cy: number, r:
 export function swipeTag(ctx: Ctx, accent: string, text: string, x: number, y: number) {
   ctx.font = montserrat(900, 34);
   ctx.textAlign = "right";
-  ctx.fillStyle = accent;
-  ctx.fillText(text, x, y);
+  movable(ctx, "swipe", textBox(ctx, text, x, y, 34), () => {
+    ctx.fillStyle = accent;
+    ctx.fillText(text, x, y);
+  });
 }
