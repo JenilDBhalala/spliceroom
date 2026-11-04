@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { Brand } from "@/types/post";
-import { useEditor, useSlides } from "@/lib/store";
+import { useConsentAnswered } from "@/lib/useConsentAnswered";
+import { isFirstVisit, useEditor, useSlides } from "@/lib/store";
 import { SIZE_OPTIONS, templateInfo } from "@/lib/templates";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import Segmented from "@/components/fields/Segmented";
@@ -13,6 +14,7 @@ import { SlideFields, useStyleTarget } from "@/components/SlidePanel";
 import SlideStrip from "@/components/SlideStrip";
 import TemplatePicker from "@/components/TemplatePicker";
 import { useDownload } from "@/components/TopBar";
+import UndoButtons from "@/components/UndoButtons";
 import BottomSheet, { type SheetSnap } from "./BottomSheet";
 
 type Tab = "edit" | "style" | "size" | "brand";
@@ -24,18 +26,30 @@ const buzz = () => navigator.vibrate?.(8);
  * a bottom sheet for controls and a tab bar. Nothing scrolls except the sheet's contents.
  */
 export default function MobileShell() {
-  const [tab, setTab] = useState<Tab | null>(null);
+  const [openTab, setOpenTab] = useState<Tab | null>(null);
   const [snap, setSnap] = useState<SheetSnap>("half");
-  const [picking, setPicking] = useState(false);
+  // First visit: start by asking what to make, then point at the Edit tab once.
+  const [picking, setPicking] = useState(isFirstVisit);
+  const [coach, setCoach] = useState(isFirstVisit);
   const fmt = useEditor((s) => s.fmt);
+  const mode = useEditor((s) => s.mode);
+  const setMode = useEditor((s) => s.setMode);
   const { slides } = useSlides();
   const style = useStyleTarget();
   const { busy, download } = useDownload();
   const install = useInstallPrompt();
+  const consentAnswered = useConsentAnswered();
 
+  // "Edit my profile" buttons inside templates ask for the profile; here that's a tab.
+  const tab: Tab | null = mode === "brand" ? "brand" : openTab;
+  const setTab = (t: Tab | null) => {
+    if (mode === "brand") setMode("slide");
+    setOpenTab(t);
+  };
 
   const open = (t: Tab) => {
     buzz();
+    setCoach(false);
     if (tab === t) return setTab(null);
     setTab(t);
   };
@@ -43,9 +57,9 @@ export default function MobileShell() {
     { id: "edit", label: "Edit", icon: <EditIcon /> },
     { id: "style", label: "Style", icon: <StyleIcon />, hidden: !style.key },
     { id: "size", label: "Size", icon: <SizeIcon /> },
-    { id: "brand", label: "Brand", icon: <BrandIcon /> },
+    { id: "brand", label: "Profile", icon: <BrandIcon /> },
   ];
-  const sheetTitle = { edit: "Edit", style: "Text style", size: "Size", brand: "Brand" } as const;
+  const sheetTitle = { edit: "Edit", style: "Text style", size: "Size", brand: "Profile" } as const;
 
   return (
     <div className="app-chrome fixed inset-0 flex flex-col bg-bg">
@@ -58,6 +72,7 @@ export default function MobileShell() {
           aria-label={`Template: ${templateInfo(fmt).name}. Change template`}
           className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line bg-raise px-3.5"
         >
+          <GridIcon />
           <span className="truncate font-semibold">{templateInfo(fmt).name}</span>
           <span aria-hidden className="text-xs text-muted">
             ▾
@@ -68,8 +83,10 @@ export default function MobileShell() {
             Install
           </button>
         )}
-        <button type="button" className="btn btn-primary min-h-11 px-3.5" disabled={busy} onClick={download} aria-label="Download post">
-          {busy ? "…" : <DownloadIcon />}
+        <UndoButtons compact />
+        <button type="button" className="btn btn-primary min-h-11 gap-1.5 px-3.5" disabled={busy} onClick={download} aria-label="Save post to your device">
+          <DownloadIcon />
+          {busy ? "…" : "Save"}
         </button>
       </header>
 
@@ -85,6 +102,21 @@ export default function MobileShell() {
           </div>
         ) : null}
       </main>
+
+      {coach && consentAnswered && !tab && !picking && (
+        <div role="note" className="pointer-events-none absolute inset-x-3 bottom-[calc(64px+env(safe-area-inset-bottom,0px))] z-10 flex">
+          <div className="pointer-events-auto relative flex w-full items-start gap-3 rounded-2xl bg-fg p-3.5 pr-3 text-[13.5px] leading-snug text-bg shadow-[0_10px_34px_rgba(0,0,0,.5)]">
+            <p className="m-0">
+              Tap <b>Edit</b> below to change the words and photos. When it looks good, tap <b>Save</b> at the top.
+            </p>
+            <button type="button" className="-my-1 min-h-9 flex-none cursor-pointer rounded-full bg-bg px-3 text-[13px] font-bold text-fg" onClick={() => setCoach(false)}>
+              Got it
+            </button>
+            {/* Points at the Edit tab. */}
+            <i aria-hidden className="absolute -bottom-1.5 size-3 rotate-45 bg-fg" style={{ left: `calc(100vw / ${tabs.filter((t) => !t.hidden).length * 2} - 18px)` }} />
+          </div>
+        </div>
+      )}
 
       {tab && (
         <BottomSheet title={sheetTitle[tab]} snap={snap} onSnap={setSnap} onClose={() => setTab(null)}>
@@ -192,6 +224,14 @@ const BrandIcon = () => (
   <svg aria-hidden {...icon}>
     <circle cx="12" cy="8" r="4" />
     <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+  </svg>
+);
+const GridIcon = () => (
+  <svg aria-hidden width="14" height="14" viewBox="0 0 16 16" className="flex-none text-accent">
+    <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" />
+    <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".55" />
+    <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".55" />
+    <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" />
   </svg>
 );
 const DownloadIcon = () => (

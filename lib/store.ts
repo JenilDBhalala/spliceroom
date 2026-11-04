@@ -362,6 +362,12 @@ const SEQUENCE_KEY = { list: "items", news: "stories", lessons: "lessons" } as c
 const sequenceOf = (posts: Posts, which: Sequence): unknown[] =>
   (posts[which] as unknown as Record<string, unknown[]>)[SEQUENCE_KEY[which]];
 
+export interface Toast {
+  msg: string;
+  at: number;
+  action?: { label: string; run: () => void };
+}
+
 export interface EditorState {
   brand: Brand;
   posts: Posts;
@@ -373,7 +379,7 @@ export interface EditorState {
   activeSlot: SlotPath | null;
   /** Selected blank-canvas layer (null = background). */
   layerSel: string | null;
-  toast: { msg: string; at: number } | null;
+  toast: Toast | null;
 
   /** Shallow-merge `patch` into the object at `path` (rooted at "brand" or "posts"). */
   update: (path: SlotPath, patch: object) => void;
@@ -400,7 +406,8 @@ export interface EditorState {
   /** Move a layer toward the front (+1) or back (-1). */
   restackLayer: (id: string, dir: -1 | 1) => void;
   applyPreset: (presetId: string) => void;
-  showToast: (msg: string) => void;
+  /** A short message at the bottom, optionally with a button (like Undo). */
+  showToast: (msg: string, action?: Toast["action"]) => void;
 
   setPanelCount: (n: 2 | 3 | 4) => void;
   addListItem: () => void;
@@ -426,6 +433,10 @@ type LegacyBrand = Partial<Omit<Brand, "logo" | "avatar">> & { logo?: string | I
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let pending: StorageValue<Persisted> | null = null;
 let warned = false;
+let firstVisit = false;
+
+/** True when nothing was saved on this device yet (known once saved work has loaded). */
+export const isFirstVisit = () => firstVisit;
 
 async function flushSave() {
   clearTimeout(saveTimer);
@@ -582,7 +593,7 @@ export const useEditor = create<EditorState>()(
         get().update(["posts"], { custom: preset.make() });
         set({ layerSel: null, activeSlot: null });
       },
-      showToast: (msg) => set({ toast: { msg, at: Date.now() } }),
+      showToast: (msg, action) => set({ toast: { msg, at: Date.now(), action } }),
 
       setPanelCount: (n) => {
         const panels = [...get().posts.list.panels];
@@ -637,7 +648,10 @@ export const useEditor = create<EditorState>()(
       name: DRAFT_KEY,
       storage: draftStorage,
       partialize: (s): Persisted => ({ brand: s.brand, posts: s.posts, size: s.size, fmt: s.fmt }),
-      merge: (persisted, current) => (persisted ? mergeSaved(persisted as Partial<Persisted>, current) : current),
+      merge: (persisted, current) => {
+        firstVisit = !persisted;
+        return persisted ? mergeSaved(persisted as Partial<Persisted>, current) : current;
+      },
     },
   ),
 );

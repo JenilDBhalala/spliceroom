@@ -72,12 +72,12 @@ export default function TweetPanel() {
         <TextField label="Time and date" value={date} onChange={setDate} tip="Leave empty to hide it." />
       )}
       <Group title="Who posted it">
-        <Toggle label="Use my brand profile" checked={useBrand} onChange={setUseBrand} />
+        <Toggle label="Use my profile" checked={useBrand} onChange={setUseBrand} />
         {useBrand ? (
           <>
             <Note>Uses your display name, page name, profile picture and tick.</Note>
             <button type="button" className="btn btn-small self-start" onClick={() => setMode("brand")}>
-              Edit brand profile
+              Edit my profile
             </button>
           </>
         ) : (

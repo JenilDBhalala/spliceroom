@@ -7,7 +7,8 @@ export default function Toast() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setHidden(toast.at), 3200);
+    // Leave time to reach the button.
+    const t = setTimeout(() => setHidden(toast.at), toast.action ? 6000 : 3200);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -15,9 +16,21 @@ export default function Toast() {
   return (
     <div
       role="status"
-      className="fixed bottom-[calc(76px+env(safe-area-inset-bottom,0px))] left-1/2 md:bottom-[calc(20px+env(safe-area-inset-bottom,0px))] z-20 max-w-[calc(100%-32px)] -translate-x-1/2 rounded-full bg-fg px-4 py-2.5 text-[13px] font-semibold text-bg shadow-[0_8px_30px_rgba(0,0,0,.5)]"
+      className="fixed bottom-[calc(76px+env(safe-area-inset-bottom,0px))] left-1/2 md:bottom-[calc(20px+env(safe-area-inset-bottom,0px))] z-20 flex max-w-[calc(100%-32px)] -translate-x-1/2 items-center gap-3 rounded-full bg-fg py-2.5 pr-2.5 pl-4 text-[13px] font-semibold text-bg shadow-[0_8px_30px_rgba(0,0,0,.5)] [&:not(:has(button))]:pr-4"
     >
-      {toast.msg}
+      <span>{toast.msg}</span>
+      {toast.action && (
+        <button
+          type="button"
+          className="-my-1 min-h-8 cursor-pointer rounded-full bg-bg px-3.5 text-[13px] font-bold text-fg"
+          onClick={() => {
+            toast.action!.run();
+            setHidden(toast.at);
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
     </div>
   );
 }

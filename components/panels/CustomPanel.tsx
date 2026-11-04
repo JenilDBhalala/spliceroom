@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { CustomPost, ImageLayer, Layer, TextLayer } from "@/types/post";
+import { toastUndo } from "@/lib/history";
 import { CANVAS_PRESETS, useEditor } from "@/lib/store";
 import ColorField from "@/components/fields/ColorField";
 import FontPicker from "@/components/fields/FontPicker";
@@ -33,7 +34,10 @@ export default function CustomPanel() {
               key={p.id}
               type="button"
               className="btn btn-small min-h-9"
-              onClick={() => confirm(`Use the "${p.name}" layout? It replaces what's on the canvas now.`) && applyPreset(p.id)}
+              onClick={() => {
+                applyPreset(p.id);
+                toastUndo(`Switched to the ${p.name} layout.`);
+              }}
             >
               {p.name}
             </button>
@@ -107,7 +111,14 @@ function LayerActions({ layer, index, count }: { layer: Layer; index: number; co
       <button type="button" className="btn btn-small" onClick={() => duplicate(layer.id)}>
         Duplicate
       </button>
-      <button type="button" className="btn btn-small btn-danger" onClick={() => remove(layer.id)}>
+      <button
+        type="button"
+        className="btn btn-small btn-danger"
+        onClick={() => {
+          remove(layer.id);
+          toastUndo(layer.kind === "text" ? "Text deleted." : "Photo deleted.");
+        }}
+      >
         Delete
       </button>
     </div>

@@ -24,12 +24,12 @@ export default function BrandPanel({ onDone }: { onDone?: () => void }) {
   );
   return (
     <>
-      <PanelHeader title="Brand & profile">
+      <PanelHeader title="Your profile">
         <button type="button" className="btn btn-small btn-primary" onClick={() => (onDone ? onDone() : setMode("slide"))}>
           Done
         </button>
       </PanelHeader>
-      <Note>Saved in this browser and used on every post.</Note>
+      <Note>Fill this in once. Your name, picture and colors are reused on every post.</Note>
       <Group title="Page">
         {text("Page name", "name", { tip: "Shown top left on headline covers when there is no logo image." })}
         <ImageSlot label="Logo image" path={["brand", "logo"]} contain empty="Optional transparent PNG. Replaces the page name." />

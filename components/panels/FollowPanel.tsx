@@ -8,9 +8,9 @@ export default function FollowPanel() {
   return (
     <>
       <TextField label="Headline" area value={cta} onChange={setCta} tip={HIGHLIGHT_TIP} />
-      <Note>The profile card uses your saved brand details. They are reused on every post.</Note>
+      <Note>The card uses your profile: picture, name, numbers and bio. Fill it in once and every post reuses it.</Note>
       <button type="button" className="btn self-start" onClick={() => setMode("brand")}>
-        Edit profile and logo
+        Edit my profile
       </button>
     </>
   );

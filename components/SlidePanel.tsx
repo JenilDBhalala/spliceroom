@@ -1,4 +1,5 @@
 import type { Posts, SlideKind, StyledKey } from "@/types/post";
+import { toastUndo } from "@/lib/history";
 import { useEditor, useSlides } from "@/lib/store";
 import { templateInfo } from "@/lib/templates";
 import LegalLinks from "./LegalLinks";
@@ -16,7 +17,7 @@ import QuotePanel from "./panels/QuotePanel";
 import StyleSection from "./panels/StyleSection";
 import TimelinePanel from "./panels/TimelinePanel";
 import TweetPanel from "./panels/TweetPanel";
-import { PanelHeader, SlideCount } from "./panels/ui";
+import { Note, PanelHeader, SlideCount } from "./panels/ui";
 
 const TITLES: Record<SlideKind, string> = {
   custom: "Blank canvas",
@@ -65,6 +66,7 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
   return (
     <>
       <PanelHeader title={TITLES[k]}>{slides.length > 1 && <SlideCount sel={sel} total={slides.length} />}</PanelHeader>
+      <Note>{templateInfo(fmt).howto}</Note>
       {(k === "hlCover" || k === "hlClean") && <HeadlinePanel slide={slide} />}
       {(k === "listCover" || k === "listItem") && <ListPanel slide={slide} />}
       {(k === "newsCover" || k === "newsStory") && <NewsPanel slide={slide} />}
@@ -87,8 +89,8 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
           type="button"
           className="btn btn-small btn-ghost btn-danger"
           onClick={() => {
-            const name = templateInfo(fmt).name;
-            if (confirm(`Start "${name}" over? Your text, photos and style for this template will be replaced with the sample.`)) resetTemplate(fmt as keyof Posts);
+            resetTemplate(fmt as keyof Posts);
+            toastUndo(`${templateInfo(fmt).name} is back to the sample.`);
           }}
         >
           Start over

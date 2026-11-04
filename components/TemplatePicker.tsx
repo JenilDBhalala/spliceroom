@@ -33,9 +33,12 @@ export default function TemplatePicker({ open, onClose }: { open: boolean; onClo
       className="m-0 h-dvh max-h-none w-full max-w-none bg-panel p-0 text-fg backdrop:bg-black/70 md:m-auto md:h-auto md:max-h-[86vh] md:max-w-4xl md:rounded-2xl md:border md:border-line"
     >
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line bg-panel px-4 pt-[max(14px,env(safe-area-inset-top,0px))] pb-3.5 md:px-6">
-        <h2 id="template-title" className="m-0 font-display text-2xl leading-none tracking-[.02em] uppercase">
-          Choose a template
-        </h2>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 id="template-title" className="m-0 font-display text-2xl leading-none tracking-[.02em] uppercase">
+            What do you want to make?
+          </h2>
+          <p className="m-0 text-[12.5px] text-muted">Pick one to start. You can change every word, photo and color, and switch any time.</p>
+        </div>
         <button type="button" className="btn btn-ghost min-h-10" onClick={onClose} autoFocus>
           Close
         </button>

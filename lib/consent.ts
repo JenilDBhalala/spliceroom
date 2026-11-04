@@ -2,6 +2,8 @@
 // applied before Google Analytics loads (see CONSENT_DEFAULTS_SCRIPT in app/layout.tsx).
 export const CONSENT_KEY = "spliceroom.consent";
 export const CONSENT_EVENT = "spliceroom:consent-settings";
+/** Fired when the visitor answers the banner. */
+export const CHOSEN_EVENT = "spliceroom:consent-chosen";
 export type Consent = "granted" | "denied";
 
 // EU/EEA, UK and Switzerland: analytics stays off until the visitor agrees.
@@ -29,13 +31,21 @@ export function getConsent(): Consent | null {
   }
 }
 
+// Remembered here too, in case localStorage is blocked.
+let chosen = false;
+
 export function setConsent(v: Consent) {
+  chosen = true;
   try {
     localStorage.setItem(CONSENT_KEY, v);
   } catch {}
+  window.dispatchEvent(new Event(CHOSEN_EVENT));
   const w = window as unknown as { gtag?: (...args: unknown[]) => void };
   w.gtag?.("consent", "update", { analytics_storage: v });
 }
+
+/** Whether the visitor has answered the banner (this visit or before). */
+export const consentAnswered = () => chosen || getConsent() !== null;
 
 /** Re-open the consent banner (the "Cookie settings" link). */
 export const openConsentSettings = () => window.dispatchEvent(new Event(CONSENT_EVENT));

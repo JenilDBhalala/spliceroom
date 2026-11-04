@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { toastUndo } from "@/lib/history";
 
 export const HIGHLIGHT_TIP = "Wrap words in *stars* to color them with your accent.";
 
@@ -46,7 +47,10 @@ export function OrderButtons({
       <button type="button" className="btn btn-small" disabled={index === count - 1} onClick={() => onMove(1)}>
         Move later →
       </button>
-      <button type="button" className="btn btn-small btn-danger" disabled={count <= 1} onClick={onDelete}>
+      <button type="button" className="btn btn-small btn-danger" disabled={count <= 1} onClick={() => {
+          onDelete();
+          toastUndo(`Deleted the ${what}.`);
+        }}>
         {`Delete ${what}`}
       </button>
     </Row>

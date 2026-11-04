@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { track } from "@/lib/analytics";
 import { downloadPost } from "@/lib/export";
-import { renderStateOf, useEditor } from "@/lib/store";
+import { isFirstVisit, renderStateOf, useEditor } from "@/lib/store";
 import { templateInfo } from "@/lib/templates";
 import LogoMark from "./LogoMark";
 import SizePicker from "./SizePicker";
 import TemplatePicker from "./TemplatePicker";
+import UndoButtons from "./UndoButtons";
 
 /**
  * Phones: logo + Brand + Download on the first row, template and size on the second.
@@ -18,7 +19,8 @@ export function useDownload() {
     setBusy(true);
     const s = useEditor.getState();
     try {
-      await downloadPost(renderStateOf(s), s.fmt);
+      const count = await downloadPost(renderStateOf(s), s.fmt);
+      s.showToast(count > 1 ? `Saved ${count} slides as a .zip. Check your downloads.` : "Saved! Check your downloads.");
       track("download", { template: s.fmt, size: s.size, scale: s.brand.exportScale });
     } catch {
       s.showToast("Could not save the file. Try again.");
@@ -32,7 +34,7 @@ export function useDownload() {
 /** Tablet and desktop top bar (phones use the app shell's own bar). */
 export default function TopBar() {
   const { busy, download } = useDownload();
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState(isFirstVisit);
   const fmt = useEditor((s) => s.fmt);
   const mode = useEditor((s) => s.mode);
   const setMode = useEditor((s) => s.setMode);
@@ -65,6 +67,7 @@ export default function TopBar() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <UndoButtons />
         <button
           type="button"
           aria-pressed={mode === "brand"}
@@ -72,7 +75,7 @@ export default function TopBar() {
           onClick={() => setMode(mode === "brand" ? "slide" : "brand")}
         >
           <span>
-            Brand<span className="hidden lg:inline"> &amp; profile</span>
+            <span className="hidden lg:inline">My </span>Profile
           </span>
         </button>
         <button type="button" className="btn btn-primary min-h-11" disabled={busy} onClick={download}>

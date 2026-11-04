@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { canvasFamilies } from "@/app/fonts";
+import { onUndoKey } from "@/lib/history";
 import { notifyRedraw } from "@/lib/images";
 import { fontFaces, setFontFamilies } from "@/lib/render/fonts";
 import { resetPlaceholders } from "@/lib/render/placeholder";
@@ -19,6 +20,7 @@ setFontFamilies(canvasFamilies);
 /** `onReady` fires once saved work has loaded and the editor is on screen. */
 export default function Editor({ onReady }: { onReady?: () => void }) {
   const accent = useEditor((s) => s.brand.accent);
+  const fmt = useEditor((s) => s.fmt);
   const phone = useIsPhone();
   // Saved work loads from IndexedDB asynchronously; wait so the sample content doesn't flash first.
   const hydrated = useSyncExternalStore(
@@ -34,6 +36,11 @@ export default function Editor({ onReady }: { onReady?: () => void }) {
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
+  }, []);
+
+  useEffect(() => {
+    addEventListener("keydown", onUndoKey);
+    return () => removeEventListener("keydown", onUndoKey);
   }, []);
 
   useEffect(() => {
@@ -74,7 +81,9 @@ export default function Editor({ onReady }: { onReady?: () => void }) {
         <section className="flex min-w-0 flex-col items-center gap-3.5 overflow-auto px-[max(16px,env(safe-area-inset-left,0px))] py-[22px]">
           <Preview />
           <p className="text-center text-[12.5px] text-muted">
-            Drag a photo on the preview to reposition it. Scroll on it to zoom. Paste an image with Ctrl+V.
+            {fmt === "custom"
+              ? "Click text or a photo on the post to select it. Drag to move it, scroll on it to resize. Ctrl+Z undoes."
+              : "Drag a photo on the post to move it, scroll on it to zoom. Paste an image with Ctrl+V. Ctrl+Z undoes."}
           </p>
           <SlideStrip />
         </section>

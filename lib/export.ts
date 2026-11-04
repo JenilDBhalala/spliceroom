@@ -22,15 +22,15 @@ function saveBlob(filename: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** One slide downloads as a PNG; a carousel as a zip of 01-cover.png, 02-…. Size follows brand.exportScale. */
-export async function downloadPost(state: RenderState, fmt: FormatId) {
+/** One slide downloads as a PNG; a carousel as a zip of 01-cover.png, 02-…. Size follows brand.exportScale. Returns the slide count. */
+export async function downloadPost(state: RenderState, fmt: FormatId): Promise<number> {
   const slides = slidesFor(fmt, state.posts);
   const scale = state.brand.exportScale ?? 2;
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `${(state.brand.name || "post").replace(/[^\w-]+/g, "")}-${fmt}-${state.frame.W}x${state.frame.H}-${stamp}`;
   if (slides.length === 1) {
     saveBlob(`${base}.png`, await slideBlob(state, slides[0], scale));
-    return;
+    return 1;
   }
   const zip = new JSZip();
   for (let i = 0; i < slides.length; i++) {
@@ -38,4 +38,5 @@ export async function downloadPost(state: RenderState, fmt: FormatId) {
     zip.file(name, await slideBlob(state, slides[i], scale));
   }
   saveBlob(`${base}.zip`, await zip.generateAsync({ type: "blob" }));
+  return slides.length;
 }
