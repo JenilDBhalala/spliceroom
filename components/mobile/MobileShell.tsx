@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { Brand } from "@/types/post";
 import { useEditor, useSlides } from "@/lib/store";
 import { SIZE_OPTIONS, templateInfo } from "@/lib/templates";
@@ -28,18 +28,11 @@ export default function MobileShell() {
   const [snap, setSnap] = useState<SheetSnap>("half");
   const [picking, setPicking] = useState(false);
   const fmt = useEditor((s) => s.fmt);
-  const layerSel = useEditor((s) => s.layerSel);
   const { slides } = useSlides();
   const style = useStyleTarget();
   const { busy, download } = useDownload();
   const install = useInstallPrompt();
 
-  // Tapping a canvas layer on the preview opens its settings.
-  const lastSel = useRef(layerSel);
-  useEffect(() => {
-    if (layerSel && layerSel !== lastSel.current) setTab("edit");
-    lastSel.current = layerSel;
-  }, [layerSel]);
 
   const open = (t: Tab) => {
     buzz();
@@ -82,7 +75,8 @@ export default function MobileShell() {
 
       <main className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 items-center justify-center p-2.5 [container-type:size]">
-          <Preview fit />
+          {/* Tapping a canvas layer opens its settings once the finger lifts; dragging doesn't. */}
+          <Preview fit onLayerTap={() => setTab("edit")} />
         </div>
         {/* The strip hides while a sheet is open so the preview keeps its room. */}
         {!tab && (slides.length > 1 || fmt === "list" || fmt === "news" || fmt === "lessons") ? (

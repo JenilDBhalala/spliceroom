@@ -7,16 +7,30 @@ import { useRedrawTick } from "@/lib/useRedrawTick";
 
 type Pt = { x: number; y: number };
 
+/** Screen pixels a pointer must travel before a press counts as a drag. */
+const TAP_SLOP = 6;
+
 /**
  * The big slide preview: drag a photo to reposition it, scroll or pinch to zoom,
  * drop or paste an image into it. `fit` sizes it to fill its container (a size container).
+ * `onLayerTap` fires when a canvas layer is tapped (released without dragging).
  */
-export default function Preview({ fit = false }: { fit?: boolean }) {
+export default function Preview({ fit = false, onLayerTap }: { fit?: boolean; onLayerTap?: (id: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const regionsRef = useRef<Region[]>([]);
   // Active pointers (canvas units) and the gesture they drive: one finger drags, two pinch.
+  // `rect` is the canvas's screen box when the gesture began: the layout can change mid-gesture
+  // (a phone's sheet opening shrinks the preview), and re-measuring then would make things jump.
+  // Nothing moves until the pointer travels TAP_SLOP px, so a tap never nudges.
   const pointers = useRef(new Map<number, Pt>());
-  const gesture = useRef<{ reg: Region; last: Pt; pinch?: { dist: number; value: number } } | null>(null);
+  const gesture = useRef<{
+    reg: Region;
+    last: Pt;
+    rect: DOMRect;
+    start: { x: number; y: number };
+    moved: boolean;
+    pinch?: { dist: number; value: number };
+  } | null>(null);
   const [grab, setGrab] = useState(false);
   const [dragging, setDragging] = useState(false);
   // Outline of the selected blank-canvas layer, in layout units.
@@ -67,8 +81,8 @@ export default function Preview({ fit = false }: { fit?: boolean }) {
     return () => cancelAnimationFrame(raf);
   }, [state, slide, tick, pxWidth, W, H, layerSel]);
 
-  const toCanvas = (e: { clientX: number; clientY: number }): Pt => {
-    const r = canvasRef.current!.getBoundingClientRect();
+  const toCanvas = (e: { clientX: number; clientY: number }, rect?: DOMRect): Pt => {
+    const r = rect ?? canvasRef.current!.getBoundingClientRect();
     const f = frameRef.current;
     return { x: ((e.clientX - r.left) * f.W) / r.width, y: ((e.clientY - r.top) * f.H) / r.height };
   };
@@ -159,6 +173,7 @@ export default function Preview({ fit = false }: { fit?: boolean }) {
     } else if (pointers.current.size === 0) {
       gesture.current = null;
       setDragging(false);
+      if (g.reg.layer && !g.moved) onLayerTap?.(g.reg.layer.id);
     }
   };
 
@@ -172,27 +187,33 @@ export default function Preview({ fit = false }: { fit?: boolean }) {
         aria-label="Slide preview"
         className={`block size-full touch-none ${dragging ? "cursor-grabbing" : grab ? "cursor-grab" : ""}`}
         onPointerDown={(e) => {
-          const pt = toCanvas(e);
           if (!gesture.current) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pt = toCanvas(e, rect);
             const reg = hit(pt);
             const st = useEditor.getState();
             if (st.fmt === "custom") st.setLayerSel(reg?.layer?.id ?? null);
             if (!reg) return;
-            gesture.current = { reg, last: pt };
+            gesture.current = { reg, last: pt, rect, start: { x: e.clientX, y: e.clientY }, moved: false };
             setDragging(true);
           }
-          pointers.current.set(e.pointerId, pt);
+          const g = gesture.current;
+          pointers.current.set(e.pointerId, toCanvas(e, g.rect));
           e.currentTarget.setPointerCapture(e.pointerId);
           if (pointers.current.size === 2) {
-            const g = gesture.current;
+            g.moved = true;
             g.pinch = { dist: distance(), value: scaleOf(g.reg) };
           }
         }}
         onPointerMove={(e) => {
           const g = gesture.current;
           if (!g || !pointers.current.has(e.pointerId)) return;
-          const pt = toCanvas(e);
+          const pt = toCanvas(e, g.rect);
           pointers.current.set(e.pointerId, pt);
+          if (!g.moved) {
+            if (Math.hypot(e.clientX - g.start.x, e.clientY - g.start.y) < TAP_SLOP) return;
+            g.moved = true;
+          }
           if (g.pinch && pointers.current.size >= 2) {
             setScale(g.reg, (g.pinch.value * distance()) / Math.max(1, g.pinch.dist));
             return;
