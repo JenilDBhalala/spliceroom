@@ -1,4 +1,4 @@
-import type { Brand, Frame, Framing, ImageSlot, PostSize, Region, SlotPath, TextBlock, TextLooks, TextMoves, TextStyle } from "@/types/post";
+import type { Brand, Frame, Framing, ImageSlot, PhotoFx, PostSize, Region, SlotPath, TextBlock, TextLooks, TextMoves, TextStyle } from "@/types/post";
 import { imageFor } from "@/lib/images";
 import { F, fontFace } from "./fonts";
 import { placeholderImage } from "./placeholder";
@@ -165,7 +165,29 @@ export function overflow(im: Drawable, f: Framing, w: number, h: number) {
   return [iw * sc - w, ih * sc - h];
 }
 
-export function drawCover(ctx: Ctx, im: Drawable | null, f: Framing, x: number, y: number, w: number, h: number) {
+/**
+ * Applies a photo's adjustments for drawing it in the x/y/w/h box (call inside save/restore).
+ * Canvas filters ignore the transform, so blur is scaled by hand like shadows.
+ */
+export function applyFx(ctx: Ctx, fx: PhotoFx | undefined, x: number, y: number, w: number) {
+  if (!fx) return;
+  if (fx.opacity !== undefined && fx.opacity < 1) ctx.globalAlpha *= fx.opacity;
+  const f = [
+    fx.brightness !== undefined && fx.brightness !== 1 && `brightness(${fx.brightness})`,
+    fx.contrast !== undefined && fx.contrast !== 1 && `contrast(${fx.contrast})`,
+    fx.saturate !== undefined && fx.saturate !== 1 && `saturate(${fx.saturate})`,
+    fx.gray && `grayscale(${fx.gray})`,
+    fx.blur && `blur(${fx.blur * ctx.getTransform().a}px)`,
+  ].filter(Boolean);
+  if (f.length) ctx.filter = f.join(" ");
+  if (fx.flip) {
+    ctx.translate(x * 2 + w, 0);
+    ctx.scale(-1, 1);
+  }
+}
+
+/** Draws `im` filling the box, framed by `f` (and adjusted by its `fx`, if it is a photo slot). */
+export function drawCover(ctx: Ctx, im: Drawable | null, f: Framing & { fx?: PhotoFx }, x: number, y: number, w: number, h: number) {
   if (!im) return;
   const [iw, ih] = dims(im);
   const sc = Math.max(w / iw, h / ih) * f.zoom;
@@ -177,6 +199,7 @@ export function drawCover(ctx: Ctx, im: Drawable | null, f: Framing, x: number, 
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
+  applyFx(ctx, f.fx, x, y, w);
   ctx.drawImage(im, x - (ex * (f.ox + 1)) / 2, y - (ey * (f.oy + 1)) / 2, dw, dh);
   ctx.restore();
 }

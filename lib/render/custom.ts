@@ -1,6 +1,6 @@
 import type { Brand, Frame, ImageLayer, Region, RenderState, TextLayer } from "@/types/post";
 import { fontDef } from "./fonts";
-import { type Ctx, blockH, drawCover, fontFace, imageOf, rrect, setShadow, shadowOff, toks, wrap } from "./helpers";
+import { type Ctx, applyFx, blockH, drawCover, fontFace, imageOf, rrect, setShadow, shadowOff, toks, wrap } from "./helpers";
 
 type Box = { x: number; y: number; w: number; h: number };
 
@@ -109,8 +109,10 @@ function drawImage(ctx: Ctx, l: ImageLayer, { W, H }: Frame): Box {
   shapePath();
   ctx.clip();
   if (im) {
-    if (l.crop === "free" && l.shape !== "circle") ctx.drawImage(im, x, y, w, h);
-    else drawCover(ctx, im, l.img, x, y, w, h);
+    if (l.crop === "free" && l.shape !== "circle") {
+      applyFx(ctx, l.img.fx, x, y, w);
+      ctx.drawImage(im, x, y, w, h);
+    } else drawCover(ctx, im, l.img, x, y, w, h);
   } else {
     ctx.fillStyle = "rgba(255,255,255,.08)";
     ctx.fillRect(x, y, w, h);

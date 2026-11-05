@@ -34,10 +34,24 @@ export interface Placeholder {
   label: string;
 }
 
+/** Photo adjustments, like a photo app's: 1 (or 0 / false) means unchanged. */
+export interface PhotoFx {
+  opacity?: number;
+  brightness?: number;
+  contrast?: number;
+  saturate?: number;
+  /** Black and white amount, 0–1. */
+  gray?: number;
+  /** Blur radius in layout units. */
+  blur?: number;
+  flip?: boolean;
+}
+
 /** An image box. `src` is a data URL; the decoded image lives in lib/images. */
 export interface ImageSlot extends Framing {
   src: string | null;
   ph: Placeholder | null;
+  fx?: PhotoFx;
 }
 
 export type FontKey =

@@ -194,7 +194,7 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
       gesture.current = null;
       setDragging(false);
       setGuides({ v: false, h: false });
-      if ((g.reg.layer || g.reg.text) && !g.moved) onItemTap?.();
+      if (!g.moved) onItemTap?.();
     }
   };
 
@@ -215,6 +215,8 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
             const st = useEditor.getState();
             if (st.fmt === "custom") st.setLayerSel(reg?.layer?.id ?? null);
             st.setTextSel(reg?.text ? { ...reg.text } : null);
+            // A template photo: its box in the panel lights up (and pastes go there).
+            if (reg && !reg.text && !reg.layer) st.setActiveSlot(reg.imgPath ?? reg.path);
             if (!reg) return;
             gesture.current = { reg, last: pt, rect, start: { x: e.clientX, y: e.clientY }, moved: false };
             setDragging(true);

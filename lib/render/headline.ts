@@ -75,6 +75,6 @@ function swipeLeft(ctx: Ctx, W: number, color: string) {
 export function hlClean(ctx: Ctx, { posts, frame }: RenderState): Region[] {
   const { W, H } = frame;
   const p = posts.headline;
-  drawCover(ctx, imageOf(p.img), p.cleanAdj, 0, 0, W, H);
+  drawCover(ctx, imageOf(p.img), { ...p.cleanAdj, fx: p.img.fx }, 0, 0, W, H);
   return [{ x: 0, y: 0, w: W, h: H, path: ["posts", "headline", "cleanAdj"], imgPath: ["posts", "headline", "img"] }];
 }
