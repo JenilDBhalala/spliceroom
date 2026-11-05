@@ -3,8 +3,7 @@ import { useEditor, useField } from "@/lib/store";
 import ImageSlot from "@/components/fields/ImageSlot";
 import Segmented from "@/components/fields/Segmented";
 import TextField from "@/components/fields/TextField";
-import Toggle from "@/components/fields/Toggle";
-import { Group, HIGHLIGHT_TIP } from "./ui";
+import { HIGHLIGHT_TIP } from "./ui";
 
 const P = ["posts", "meme"] as const;
 const BARS = [
@@ -21,11 +20,9 @@ export default function MemePanel() {
   const setMemeMode = useEditor((s) => s.setMemeMode);
   const bar = useEditor((s) => s.posts.meme.bar);
   const setMemeBar = useEditor((s) => s.setMemeBar);
-  const brandName = useEditor((s) => s.brand.name);
   const [top, setTop] = useField<string>(P, "top");
   const [bottom, setBottom] = useField<string>(P, "bottom");
   const [caption, setCaption] = useField<string>(P, "caption");
-  const [watermark, setWatermark] = useField<boolean>(P, "watermark");
   return (
     <>
       <Segmented<MemePost["mode"]> label="Meme style" value={mode} options={MODES} onChange={setMemeMode} />
@@ -42,9 +39,6 @@ export default function MemePanel() {
           <TextField label="Bottom text" value={bottom} onChange={setBottom} tip={HIGHLIGHT_TIP} />
         </>
       )}
-      <Group>
-        <Toggle label={`Show @${brandName || "yourpage"} in the corner`} checked={watermark} onChange={setWatermark} />
-      </Group>
     </>
   );
 }

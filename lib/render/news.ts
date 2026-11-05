@@ -1,13 +1,13 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import {
   type Ctx, type Wrapped, accentOf, blockH, drawCover, drawLines, fadeBottom, fontFace, imageOf, montserrat, movable, shadowOff, shadowOn, swipeTag,
-  toks, wrap,
+  toks, wrap, lookOf, tintOf,
 } from "./helpers";
 
 export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
   const { W, H } = frame;
   const p = posts.news;
-  const st = p.style;
+  const st = lookOf("text", p.style);
   const regs: Region[] = [{ x: 0, y: 0, w: W, h: H, path: ["posts", "news", "img"] }];
   drawCover(ctx, imageOf(p.img), p.img, 0, 0, W, H);
   fadeBottom(ctx, frame, H * 0.52, H * 0.8);
@@ -110,10 +110,11 @@ export function newsStory(ctx: Ctx, { brand, posts, frame }: RenderState, sl: Sl
   // Like the reference, an overflowing text ends the loop one step below the minimum.
   const y0 = H * 0.735 + (maxH - totalH()) / 2 + 10;
   const bodyW = Math.max(0, ...fits.flatMap((f) => f.lines.map((L) => L.w)));
+  const color = tintOf("text", "#ffffff");
   movable(ctx, "text", { x: W / 2 - bodyW / 2, y: y0, w: bodyW, h: totalH() + size * 0.22 }, () => {
     let y = y0;
     fits.forEach((f) => {
-      drawLines(ctx, f, W / 2, y, lh, "#fff", accentOf(brand, posts.news.style));
+      drawLines(ctx, f, W / 2, y, lh, color, accentOf(brand, posts.news.style));
       y += blockH(f.lines.length, size, lh) + size * 0.95;
     });
   });

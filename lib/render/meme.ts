@@ -1,6 +1,7 @@
 import type { Brand, Frame, Region, RenderState } from "@/types/post";
 import {
-  type Ctx, type Wrapped, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, imageOf, linesBox, movable, shadowOff, shadowOn, textBox,
+  type Ctx, type Wrapped, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, imageOf, linesBox, lookOf, movable, shadowOff, shadowOn, textBox,
+  tintOf,
 } from "./helpers";
 
 export function meme(ctx: Ctx, state: RenderState): Region[] {
@@ -11,24 +12,24 @@ export function meme(ctx: Ctx, state: RenderState): Region[] {
 function classicMeme(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
   const { W, H } = frame;
   const p = posts.meme;
-  const accent = accentOf(brand, p.style);
   drawCover(ctx, imageOf(p.img), p.img, 0, 0, W, H);
   const lh = leadOf(p.style, 1.02);
   const maxH = H * 0.27;
   if (p.top.trim()) {
     ctx.save();
-    const fit = fitStyled(ctx, p.top, p.style, W - 80, maxH, lh, 120, 36);
-    movable(ctx, "top", linesBox(fit, W / 2, 46, lh), () => drawOutlined(ctx, fit, W / 2, 46, lh, p.style.color, accent));
+    const st = lookOf("top", p.style);
+    const fit = fitStyled(ctx, p.top, st, W - 80, maxH, lh, 120, 36);
+    movable(ctx, "top", linesBox(fit, W / 2, 46, lh), () => drawOutlined(ctx, fit, W / 2, 46, lh, st.color, accentOf(brand, st)));
     ctx.restore();
   }
   if (p.bottom.trim()) {
     ctx.save();
-    const fit = fitStyled(ctx, p.bottom, p.style, W - 80, maxH, lh, 120, 36);
+    const st = lookOf("bottom", p.style);
+    const fit = fitStyled(ctx, p.bottom, st, W - 80, maxH, lh, 120, 36);
     const top = H - 46 - blockH(fit.lines.length, fit.size, lh);
-    movable(ctx, "bottom", linesBox(fit, W / 2, top, lh), () => drawOutlined(ctx, fit, W / 2, top, lh, p.style.color, accent));
+    movable(ctx, "bottom", linesBox(fit, W / 2, top, lh), () => drawOutlined(ctx, fit, W / 2, top, lh, st.color, accentOf(brand, st)));
     ctx.restore();
   }
-  if (p.watermark) watermark(ctx, brand, frame);
   return [{ x: 0, y: 0, w: W, h: H, path: ["posts", "meme", "img"] }];
 }
 
@@ -40,14 +41,14 @@ function captionMeme(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
   const padY = 54;
   const lh = leadOf(p.style, 1.22);
   ctx.save();
-  const fit = fitStyled(ctx, p.caption, p.style, W - padX * 2, H * 0.45, lh, 64, 30);
+  const st = lookOf("caption", p.style);
+  const fit = fitStyled(ctx, p.caption, st, W - padX * 2, H * 0.45, lh, 64, 30);
   const barH = p.caption.trim() ? blockH(fit.lines.length, fit.size, lh) + padY * 2 : 0;
   ctx.fillStyle = p.bar === "dark" ? "#000" : "#fff";
   ctx.fillRect(0, 0, W, barH);
-  if (barH) movable(ctx, "caption", linesBox(fit, padX, padY, lh, "left"), () => drawLines(ctx, fit, padX, padY, lh, p.style.color, accentOf(brand, p.style), "left"));
+  if (barH) movable(ctx, "caption", linesBox(fit, padX, padY, lh, "left"), () => drawLines(ctx, fit, padX, padY, lh, st.color, accentOf(brand, st), "left"));
   ctx.restore();
   drawCover(ctx, imageOf(p.img), p.img, 0, barH, W, H - barH);
-  if (p.watermark) watermark(ctx, brand, frame);
   return [{ x: 0, y: barH, w: W, h: H - barH, path: ["posts", "meme", "img"] }];
 }
 
@@ -70,16 +71,18 @@ function drawOutlined(ctx: Ctx, res: Wrapped, cx: number, top: number, lh: numbe
   });
 }
 
-/** Small page handle in the bottom-right corner. */
-export function watermark(ctx: Ctx, brand: Brand, { W, H }: Frame) {
+/** Small page handle in a bottom corner (drag it anywhere). */
+export function watermark(ctx: Ctx, brand: Brand, { W, H }: Frame, corner: "left" | "right" = "right") {
   if (!brand.name) return;
   const text = `@${brand.name}`;
+  const x = corner === "right" ? W - 28 : 28;
   ctx.font = archivo(600, 28);
-  ctx.textAlign = "right";
-  movable(ctx, "watermark", textBox(ctx, text, W - 28, H - 28, 28), () => {
-    ctx.fillStyle = "rgba(255,255,255,.75)";
+  ctx.textAlign = corner;
+  const color = tintOf("watermark", "rgba(255,255,255,.75)");
+  movable(ctx, "watermark", textBox(ctx, text, x, H - 28, 28), () => {
+    ctx.fillStyle = color;
     shadowOn(ctx, 8);
-    ctx.fillText(text, W - 28, H - 28);
+    ctx.fillText(text, x, H - 28);
     shadowOff(ctx);
   });
 }

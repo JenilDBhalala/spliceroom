@@ -3,7 +3,6 @@ import ColorField from "@/components/fields/ColorField";
 import ImageSlot from "@/components/fields/ImageSlot";
 import Segmented from "@/components/fields/Segmented";
 import TextField from "@/components/fields/TextField";
-import Toggle from "@/components/fields/Toggle";
 import { Group, HIGHLIGHT_TIP } from "./ui";
 
 const P = ["posts", "quote"] as const;
@@ -18,7 +17,6 @@ export default function QuotePanel() {
   const [source, setSource] = useField<string>(P, "source");
   const [usePhoto, setUsePhoto] = useField<boolean>(P, "usePhoto");
   const [background, setBackground] = useField<string>(P, "background");
-  const [watermark, setWatermark] = useField<boolean>(P, "watermark");
   return (
     <>
       <TextField label="Quote" area value={quote} onChange={setQuote} tip={HIGHLIGHT_TIP} />
@@ -27,7 +25,6 @@ export default function QuotePanel() {
       <Group title="Background">
         <Segmented label="Background" value={usePhoto ? "photo" : "color"} options={BACKGROUNDS} onChange={(v) => setUsePhoto(v === "photo")} />
         {usePhoto ? <ImageSlot label="Photo" path={[...P, "img"]} tip="Darkened so the quote stays readable." /> : <ColorField label="Color" value={background} onChange={setBackground} />}
-        <Toggle label="Show your page name" checked={watermark} onChange={setWatermark} />
       </Group>
     </>
   );

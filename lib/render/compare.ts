@@ -1,7 +1,7 @@
 import type { ImageSlot, Region, RenderState } from "@/types/post";
 import {
-  type Ctx, accentOf, anton, blockH, drawCover, drawLines, fitStyled, leadOf, fitText, imageOf, linesBox, montserrat, movable, rrect, shadowOff, shadowOn,
-  toks,
+  type Ctx, accentOf, anton, blockH, drawCover, drawLines, fitStyled, leadOf, fitText, imageOf, linesBox, lookOf, montserrat, movable, rrect, shadowOff,
+  shadowOn, tintOf, toks,
 } from "./helpers";
 
 /** Two photos side by side (or stacked) with labels, an optional headline band and a VS badge. */
@@ -16,9 +16,10 @@ export function compare(ctx: Ctx, { brand, posts, frame }: RenderState): Region[
   if (p.headline.trim()) {
     const lh = leadOf(p.style, 1.05);
     ctx.save();
-    const fit = fitStyled(ctx, p.headline, p.style, W - 100, H * 0.16, lh, 96, 34);
+    const st = lookOf("headline", p.style);
+    const fit = fitStyled(ctx, p.headline, st, W - 100, H * 0.16, lh, 96, 34);
     bandH = blockH(fit.lines.length, fit.size, lh) + 88;
-    movable(ctx, "headline", linesBox(fit, W / 2, 44, lh), () => drawLines(ctx, fit, W / 2, 44, lh, p.style.color, accent));
+    movable(ctx, "headline", linesBox(fit, W / 2, 44, lh), () => drawLines(ctx, fit, W / 2, 44, lh, st.color, accentOf(brand, st)));
     ctx.restore();
   }
 
@@ -55,8 +56,9 @@ export function compare(ctx: Ctx, { brand, posts, frame }: RenderState): Region[
     const pillH = fit.size + 34;
     const px = x + w / 2 - pillW / 2;
     const py = y + h - 40 - pillH;
+    const pill = tintOf(`${key}Label`, accent);
     movable(ctx, `${key}Label`, { x: px, y: py, w: pillW, h: pillH }, () => {
-      ctx.fillStyle = accent;
+      ctx.fillStyle = pill;
       rrect(ctx, px, py, pillW, pillH, pillH / 2);
       ctx.fill();
       drawLines(ctx, { ...fit, lines: fit.lines.slice(0, 1) }, x + w / 2, py + 17 + fit.size * 0.13, 1, "#0b1a0c", "#0b1a0c");

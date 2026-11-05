@@ -15,9 +15,11 @@ import MemePanel from "./panels/MemePanel";
 import NewsPanel from "./panels/NewsPanel";
 import PosterPanel from "./panels/PosterPanel";
 import QuotePanel from "./panels/QuotePanel";
+import SelectedText from "./panels/SelectedText";
 import StyleSection from "./panels/StyleSection";
 import TimelinePanel from "./panels/TimelinePanel";
 import TweetPanel from "./panels/TweetPanel";
+import Toggle from "./fields/Toggle";
 import { Note, PanelHeader, SlideCount } from "./panels/ui";
 
 const TITLES: Record<SlideKind, string> = {
@@ -60,6 +62,7 @@ export function useStyleTarget(): { key: StyledKey | null; note?: string } {
 export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
   const fmt = useEditor((s) => s.fmt);
   const resetTemplate = useEditor((s) => s.resetTemplate);
+  const textSel = useEditor((s) => s.textSel);
   const { slides, sel } = useSlides();
   const style = useStyleTarget();
   const slide = slides[sel];
@@ -67,8 +70,10 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
   return (
     <>
       <PanelHeader title={TITLES[k]}>{slides.length > 1 && <SlideCount sel={sel} total={slides.length} />}</PanelHeader>
+      {textSel?.key.startsWith(`${k}.`) && <SelectedText key={textSel.key} block={textSel} />}
       <Note>{templateInfo(fmt).howto}</Note>
       {k !== "custom" && <TextPositions post={POST_OF[k]} />}
+      {k !== "follow" && <PageNameToggle post={k === "custom" ? "custom" : POST_OF[k]} />}
       {(k === "hlCover" || k === "hlClean") && <HeadlinePanel slide={slide} />}
       {(k === "listCover" || k === "listItem") && <ListPanel slide={slide} />}
       {(k === "newsCover" || k === "newsStory") && <NewsPanel slide={slide} />}
@@ -103,21 +108,31 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
   );
 }
 
+/** "@pagename" in a corner, on any template (drag it anywhere once it shows). */
+function PageNameToggle({ post }: { post: keyof Posts }) {
+  const on = useEditor((s) => !!(s.posts[post] as { watermark?: boolean }).watermark);
+  const name = useEditor((s) => s.brand.name);
+  const update = useEditor((s) => s.update);
+  return <Toggle label={`Show @${name || "yourpage"} on the post`} checked={on} onChange={(watermark) => update(["posts", post], { watermark })} />;
+}
+
 /** Says text can be dragged, and puts it all back once something was moved. */
 function TextPositions({ post }: { post: (typeof POST_OF)[keyof typeof POST_OF] }) {
-  const moved = useEditor((s) => Object.keys(s.posts[post].moves ?? {}).length > 0);
+  const moved = useEditor((s) => Object.keys({ ...s.posts[post].moves, ...s.posts[post].looks }).length > 0);
   const update = useEditor((s) => s.update);
   return (
     <div className="flex items-center gap-3 rounded-lg border border-dashed border-line px-3 py-2.5">
       <span aria-hidden className="text-base leading-none">✥</span>
-      <p className="m-0 flex-1 text-[12.5px] leading-snug text-muted">Drag any text on the post to move it. Pinch or scroll on it to resize.</p>
+      <p className="m-0 flex-1 text-[12.5px] leading-snug text-muted">
+        Drag any text on the post to move it, pinch or scroll to resize. Tap it for its own color, font and more.
+      </p>
       {moved && (
         <button
           type="button"
           className="btn btn-small flex-none"
           onClick={() => {
-            update(["posts", post], { moves: undefined });
-            toastUndo("Text is back in its original place.");
+            update(["posts", post], { moves: undefined, looks: undefined });
+            toastUndo("All text is back to the template's look.");
           }}
         >
           Reset

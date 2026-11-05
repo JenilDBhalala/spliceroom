@@ -1,7 +1,7 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import {
-  type Ctx, accentOf, anton, blockH, drawContain, drawCover, drawLines, fadeBottom, fitStyled, leadOf, fitText, fontFace, imageOf, linesBox, montserrat,
-  movable, rrect, shadowOff, shadowOn, swipeTag, toks, uploaded,
+  type Ctx, accentOf, anton, blockH, drawContain, drawCover, drawLines, fadeBottom, fitStyled, leadOf, fitText, fontFace, imageOf, linesBox,
+  montserrat, movable, rrect, shadowOff, shadowOn, swipeTag, toks, uploaded, lookOf,
 } from "./helpers";
 
 export function listCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -23,10 +23,11 @@ export function listCover(ctx: Ctx, { brand, posts, frame }: RenderState): Regio
   const accent = accentOf(brand, p.style);
   const lh = leadOf(p.style, 1.0);
   ctx.save();
-  const fit = fitStyled(ctx, p.text, p.style, W - 110, H * 0.36, lh, 150, 40);
+  const st = lookOf("text", p.style);
+  const fit = fitStyled(ctx, p.text, st, W - 110, H * 0.36, lh, 150, 40);
   const bottom = H - 120;
   const bh = blockH(fit.lines.length, fit.size, lh);
-  movable(ctx, "text", linesBox(fit, W / 2, bottom - bh, lh), () => drawLines(ctx, fit, W / 2, bottom - bh, lh, p.style.color, accent));
+  movable(ctx, "text", linesBox(fit, W / 2, bottom - bh, lh), () => drawLines(ctx, fit, W / 2, bottom - bh, lh, st.color, accentOf(brand, st)));
   ctx.restore();
   if (p.swipe) swipeTag(ctx, accent, "SWIPE", W - 70, H - 50);
   return regs;

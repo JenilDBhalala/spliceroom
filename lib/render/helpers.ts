@@ -1,4 +1,4 @@
-import type { Brand, Frame, Framing, ImageSlot, PostSize, Region, SlotPath, TextMoves, TextStyle } from "@/types/post";
+import type { Brand, Frame, Framing, ImageSlot, PostSize, Region, SlotPath, TextBlock, TextLooks, TextMoves, TextStyle } from "@/types/post";
 import { imageFor } from "@/lib/images";
 import { F, fontFace } from "./fonts";
 import { placeholderImage } from "./placeholder";
@@ -32,11 +32,35 @@ export interface Box {
   h: number;
 }
 
-// Set by renderSlide around each slide: where text moves live and where to report text regions.
-let moving: { moves: TextMoves; path: SlotPath; prefix: string; frame: Frame; regions: Region[] } | null = null;
+// Set by renderSlide around each slide: the user's moves and looks, and where to report text regions.
+let moving: {
+  moves: TextMoves;
+  looks: TextLooks;
+  path: SlotPath;
+  prefix: string;
+  frame: Frame;
+  regions: Region[];
+  /** What lookOf / tintOf said about each block, for its region. */
+  blocks: Map<string, Pick<TextBlock, "look" | "base">>;
+} | null = null;
 
-export function beginMoves(moves: TextMoves | undefined, path: SlotPath, prefix: string, frame: Frame) {
-  moving = { moves: moves ?? {}, path, prefix, frame, regions: [] };
+export function beginMoves(moves: TextMoves | undefined, looks: TextLooks | undefined, path: SlotPath, prefix: string, frame: Frame) {
+  moving = { moves: moves ?? {}, looks: looks ?? {}, path, prefix, frame, regions: [], blocks: new Map() };
+}
+
+/** The template's text style for one block, with that block's own look on top. Call before laying the block out. */
+export function lookOf(key: string, base: TextStyle): TextStyle {
+  if (!moving) return base;
+  moving.blocks.set(key, { look: "style", base: { color: base.color, font: base.font, accent: base.accent, caps: base.caps } });
+  const own = moving.looks[`${moving.prefix}.${key}`];
+  return own ? { ...base, ...own } : base;
+}
+
+/** A fixed-style block's color, or the color the user picked for it. */
+export function tintOf(key: string, color: string): string {
+  if (!moving) return color;
+  moving.blocks.set(key, { look: "color", base: { color } });
+  return moving.looks[`${moving.prefix}.${key}`]?.color ?? color;
 }
 
 /** Text regions drawn since beginMoves. */
@@ -58,6 +82,7 @@ export function movable(ctx: Ctx, key: string, box: Box, draw: () => void): (b: 
   }
   const k = `${moving.prefix}.${key}`;
   const m = moving.moves[k];
+  const opacity = moving.looks[k]?.opacity ?? 1;
   const { W, H } = moving.frame;
   const s = m?.s ?? 1;
   const cx = box.x + box.w / 2;
@@ -67,16 +92,19 @@ export function movable(ctx: Ctx, key: string, box: Box, draw: () => void): (b: 
   ctx.save();
   if (m) {
     ctx.translate(cx + dx, cy + dy);
+    if (m.r) ctx.rotate((m.r * Math.PI) / 180);
     ctx.scale(s, s);
     ctx.translate(-cx, -cy);
   }
+  if (opacity < 1) ctx.globalAlpha *= opacity;
   draw();
   ctx.restore();
   // A little slack around the text makes it easier to grab.
   const pad = 16;
   const w = box.w * s + pad * 2;
   const h = box.h * s + pad * 2;
-  moving.regions.push({ x: cx + dx - w / 2, y: cy + dy - h / 2, w, h, path: moving.path, text: { key: k } });
+  const block = moving.blocks.get(key) ?? { look: "none", base: { color: "" } };
+  moving.regions.push({ x: cx + dx - w / 2, y: cy + dy - h / 2, w, h, path: moving.path, text: { key: k, ...block, home: { cx: cx / W, cy: cy / H } } });
   return (b) => ({ x: cx + dx + (b.x - cx) * s, y: cy + dy + (b.y - cy) * s, w: b.w * s, h: b.h * s });
 }
 
@@ -350,8 +378,9 @@ export function drawAvatar(ctx: Ctx, slot: ImageSlot, cx: number, cy: number, r:
 export function swipeTag(ctx: Ctx, accent: string, text: string, x: number, y: number) {
   ctx.font = montserrat(900, 34);
   ctx.textAlign = "right";
+  const color = tintOf("swipe", accent);
   movable(ctx, "swipe", textBox(ctx, text, x, y, 34), () => {
-    ctx.fillStyle = accent;
+    ctx.fillStyle = color;
     ctx.fillText(text, x, y);
   });
 }

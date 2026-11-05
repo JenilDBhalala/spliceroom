@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
 import type {
   Brand, CustomPost, FormatId, Framing, ImageLayer, ImageSlot, Layer, Lesson, ListItem, PostSize, Posts, RenderState, SlotPath, Story,
-  StyledKey, TextLayer, TextStyle, TimelineRow,
+  StyledKey, TextBlock, TextLayer, TextStyle, TimelineRow,
 } from "@/types/post";
 import { idbDel, idbGet, idbSet } from "@/lib/db";
 import { readImageFile } from "@/lib/images";
@@ -379,6 +379,8 @@ export interface EditorState {
   activeSlot: SlotPath | null;
   /** Selected blank-canvas layer (null = background). */
   layerSel: string | null;
+  /** Template text block tapped on the preview, whose own look the panel edits. */
+  textSel: TextBlock | null;
   toast: Toast | null;
 
   /** Shallow-merge `patch` into the object at `path` (rooted at "brand" or "posts"). */
@@ -400,6 +402,7 @@ export interface EditorState {
   setMode: (mode: "slide" | "brand") => void;
   setActiveSlot: (path: SlotPath | null) => void;
   setLayerSel: (id: string | null) => void;
+  setTextSel: (block: TextBlock | null) => void;
   addLayer: (kind: Layer["kind"]) => void;
   duplicateLayer: (id: string) => void;
   removeLayer: (id: string) => void;
@@ -519,6 +522,7 @@ export const useEditor = create<EditorState>()(
       mode: "slide",
       activeSlot: null,
       layerSel: null,
+      textSel: null,
       toast: null,
 
       update: (path, patch) => {
@@ -528,7 +532,7 @@ export const useEditor = create<EditorState>()(
       },
       setImage: (path, src) => get().update(path, { src, zoom: 1, ox: 0, oy: 0 }),
       resetFraming: (path) => get().update(path, { zoom: 1, ox: 0, oy: 0 } satisfies Framing),
-      setFmt: (fmt) => set({ fmt, sel: 0, mode: "slide", activeSlot: null }),
+      setFmt: (fmt) => set({ fmt, sel: 0, mode: "slide", activeSlot: null, textSel: null }),
       setSize: (size) => set({ size }),
       resetStyle: (key) => {
         const meme = get().posts.meme;
@@ -558,10 +562,11 @@ export const useEditor = create<EditorState>()(
           style: p.style.color === from.color ? { ...p.style, color: to.color } : p.style,
         });
       },
-      select: (sel) => set({ sel, mode: "slide" }),
+      select: (sel) => set({ sel, mode: "slide", textSel: null }),
       setMode: (mode) => set({ mode }),
       setActiveSlot: (activeSlot) => set({ activeSlot }),
       setLayerSel: (layerSel) => set({ layerSel, mode: "slide" }),
+      setTextSel: (textSel) => set({ textSel }),
       addLayer: (kind) => {
         const layer = kind === "text" ? textLayer() : imageLayer("new photo", { w: 0.5 });
         get().update(["posts", "custom"], { layers: [...get().posts.custom.layers, layer] });

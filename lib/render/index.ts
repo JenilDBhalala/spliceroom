@@ -6,7 +6,7 @@ import { newsCover, newsStory } from "./news";
 import { lessonItem, lessonsCover } from "./lessons";
 import { timeline } from "./timeline";
 import { poster } from "./poster";
-import { meme } from "./meme";
+import { meme, watermark } from "./meme";
 import { tweet } from "./tweet";
 import { quote } from "./quote";
 import { compare } from "./compare";
@@ -29,6 +29,9 @@ export const POST_OF: Record<Exclude<SlideKind, "custom">, Exclude<keyof Posts, 
   lessonsCover: "lessons", lessonItem: "lessons", timeline: "timeline", poster: "poster", meme: "meme", tweet: "tweet",
   quote: "quote", compare: "compare", follow: "follow",
 };
+
+/** Slides with a "Swipe" tag or years in the bottom-right corner put the page name bottom-left instead. */
+const WATERMARK_LEFT = new Set<SlideKind>(["listCover", "newsCover", "lessonsCover", "timeline"]);
 
 /** Single-slide templates: slide kind and strip label. */
 const SINGLE: Partial<Record<FormatId, Slide>> = {
@@ -92,10 +95,15 @@ export function renderSlide(ctx: Ctx, state: RenderState, slide: Slide, scale = 
   let regs: Region[] = [];
   if (slide.kind !== "custom") {
     const post = POST_OF[slide.kind];
-    beginMoves(state.posts[post].moves, ["posts", post, "moves"], slide.kind, state.frame);
+    beginMoves(state.posts[post].moves, state.posts[post].looks, ["posts", post, "moves"], slide.kind, state.frame);
   }
   try {
     regs = RENDERERS[slide.kind](ctx, state, slide) || [];
+    // The follow card is the profile itself, and lesson slides already show the page name in their footer.
+    const post = slide.kind === "custom" ? "custom" : POST_OF[slide.kind];
+    if ((state.posts[post] as { watermark?: boolean }).watermark && slide.kind !== "follow" && slide.kind !== "lessonItem") {
+      watermark(ctx, state.brand, state.frame, WATERMARK_LEFT.has(slide.kind) ? "left" : "right");
+    }
   } catch (e) {
     console.error(e);
   }

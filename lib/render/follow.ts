@@ -1,6 +1,7 @@
 import type { Region, RenderState } from "@/types/post";
 import {
   type Ctx, accentOf, archivo, blockH, drawContain, drawCover, fitStyled, leadOf, montserrat, movable, rrect, setShadow, uploaded, verifiedBadge,
+  lookOf,
 } from "./helpers";
 
 export function follow(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -136,7 +137,9 @@ export function follow(ctx: Ctx, { brand, posts, frame }: RenderState): Region[]
   const maxW = W - 80;
   const lh = leadOf(style, 1.0);
   ctx.save();
-  const fit = fitStyled(ctx, brand.cta, style, maxW * 0.9, maxH, lh, 150, 40);
+  const st = lookOf("cta", style);
+  const ctaAccent = accentOf(brand, st);
+  const fit = fitStyled(ctx, brand.cta, st, maxW * 0.9, maxH, lh, 150, 40);
   const bh = blockH(fit.lines.length, fit.size, lh);
   const t0 = top + Math.max(0, (maxH - bh) / 2);
   movable(ctx, "cta", { x: 40, y: t0, w: maxW, h: bh }, () => {
@@ -150,7 +153,7 @@ export function follow(ctx: Ctx, { brand, posts, frame }: RenderState): Region[]
       let x = -L.w / 2;
       L.words.forEach((wd, k) => {
         if (k && !wd.join) x += fit.sp;
-        ctx.fillStyle = wd.em ? accent : style.color;
+        ctx.fillStyle = wd.em ? ctaAccent : st.color;
         ctx.textAlign = "left";
         ctx.fillText(wd.t, x, 0);
         x += wd.w;

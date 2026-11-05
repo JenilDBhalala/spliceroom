@@ -41,7 +41,7 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
   // Outline of the selected blank-canvas layer or template text block, in layout units.
   const [selBox, setSelBox] = useState<Region | null>(null);
   const layerSel = useEditor((s) => (s.fmt === "custom" ? s.layerSel : null));
-  const [textSel, setTextSel] = useState<string | null>(null);
+  const textSel = useEditor((s) => s.textSel?.key ?? null);
   // Guide lines while a text block sits snapped on its original column (v) or row (h).
   const [guides, setGuides] = useState<{ v: boolean; h: boolean }>({ v: false, h: false });
   const state = useRenderState();
@@ -214,7 +214,7 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
             const reg = hit(pt);
             const st = useEditor.getState();
             if (st.fmt === "custom") st.setLayerSel(reg?.layer?.id ?? null);
-            setTextSel(reg?.text?.key ?? null);
+            st.setTextSel(reg?.text ? { ...reg.text } : null);
             if (!reg) return;
             gesture.current = { reg, last: pt, rect, start: { x: e.clientX, y: e.clientY }, moved: false };
             setDragging(true);

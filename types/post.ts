@@ -100,8 +100,12 @@ export interface Brand {
 }
 
 export interface HeadlinePost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   img: ImageSlot;
   /** Framing of the same photo on the clean slide. */
@@ -124,8 +128,12 @@ export interface ListItem {
 }
 
 export interface ListPost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   panels: ImageSlot[];
   panelCount: 2 | 3 | 4;
@@ -142,8 +150,12 @@ export interface Story {
 }
 
 export interface NewsPost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   img: ImageSlot;
   inset: ImageSlot;
@@ -162,8 +174,12 @@ export interface Lesson {
 }
 
 export interface LessonsPost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   img: ImageSlot;
   /** Optional transparent PNG of the movie title, replacing the title text. */
@@ -187,15 +203,23 @@ export interface TimelineRow {
 }
 
 export interface TimelinePost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   rows: TimelineRow[];
 }
 
 export interface PosterPost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   img: ImageSlot;
   logo: ImageSlot;
@@ -210,6 +234,8 @@ export interface PosterPost {
 export interface MemePost {
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   /** classic: text on the photo; caption: white bar above the photo. */
   mode: "classic" | "caption";
@@ -223,8 +249,12 @@ export interface MemePost {
 }
 
 export interface TweetPost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   theme: "dark" | "light";
   background: string;
@@ -247,6 +277,8 @@ export interface TweetPost {
 export interface QuotePost {
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   img: ImageSlot;
   usePhoto: boolean;
@@ -258,8 +290,12 @@ export interface QuotePost {
 }
 
 export interface ComparePost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
   layout: "side" | "stack";
   headline: string;
@@ -316,6 +352,8 @@ export interface ImageLayer {
 export type Layer = TextLayer | ImageLayer;
 
 export interface CustomPost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
   bg: "photo" | "color" | "gradient";
   bgImg: ImageSlot;
   bgColor: string;
@@ -328,6 +366,8 @@ export interface CustomPost {
 export interface FollowPost {
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
   style: TextStyle;
 }
 
@@ -390,14 +430,33 @@ export interface Region {
   /** A canvas layer: dragging moves it (x/y at `path`), zooming resizes this field. */
   layer?: { id: string; resize: "size" | "w" };
   /** A template's text block: dragging and zooming change `moves[key]` (the object at `path`). */
-  text?: { key: string };
+  text?: TextBlock;
 }
+
+/**
+ * What can be restyled on one template text block: "style" blocks use the template's text style
+ * (font, colors), "color" blocks have one fixed color, "none" blocks (cards, badges) only move and resize.
+ * `base` is how the template draws it before the user's own look.
+ */
+export interface TextBlock {
+  key: string;
+  look: "style" | "color" | "none";
+  base: { color: string; font?: FontKey; accent?: string | null; caps?: boolean };
+  /** Center of the block where the template puts it, as fractions of the slide (for centering). */
+  home: { cx: number; cy: number };
+}
+
+/** One text block's own look, over the template's. */
+export type TextLook = Partial<Pick<TextStyle, "font" | "color" | "accent" | "caps">> & { opacity?: number };
+export type TextLooks = Record<string, TextLook>;
 
 /** How far a template's text block was dragged (fractions of the slide) and how much it was resized. */
 export interface TextMove {
   dx: number;
   dy: number;
   s: number;
+  /** Rotation in degrees. */
+  r?: number;
 }
 export type TextMoves = Record<string, TextMove>;
 

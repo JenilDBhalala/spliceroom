@@ -1,8 +1,7 @@
 import type { Region, RenderState, Slide } from "@/types/post";
-import { brandMark } from "./headline";
 import {
-  type Ctx, type Wrapped, accentOf, anton, archivo, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, fitText, imageOf, linesBox, montserrat,
-  movable, shadowOff, shadowOn, swipeTag, textBox, toks, uploaded, wrap,
+  brandMark } from "./headline"; import {   type Ctx, type Wrapped, accentOf, anton, archivo, blockH, drawCover, drawLines, fadeBottom, fitStyled,
+  leadOf, fitText, imageOf, linesBox, montserrat, movable, shadowOff, shadowOn, swipeTag, textBox, toks, uploaded, wrap, lookOf, tintOf,
 } from "./helpers";
 
 export function lessonsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -30,9 +29,10 @@ export function lessonsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Re
   } else {
     const lh = leadOf(p.style, 1.0);
     ctx.save();
-    const fit = fitStyled(ctx, p.title, p.style, W - 120, H * 0.24, lh, 150, 44);
+    const st = lookOf("title", p.style);
+    const fit = fitStyled(ctx, p.title, st, W - 120, H * 0.24, lh, 150, 44);
     const top = (titleTop = titleBottom - blockH(fit.lines.length, fit.size, lh));
-    movable(ctx, "title", linesBox(fit, W / 2, top, lh), () => drawLines(ctx, fit, W / 2, top, lh, p.style.color, accent));
+    movable(ctx, "title", linesBox(fit, W / 2, top, lh), () => drawLines(ctx, fit, W / 2, top, lh, st.color, accentOf(brand, st)));
     ctx.restore();
   }
 
@@ -43,7 +43,8 @@ export function lessonsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Re
     const fit = fitText(ctx, toks(p.kicker), (s) => montserrat(800, s), W - 160, 120, lh, 44, 24);
     const kh = blockH(fit.lines.length, fit.size, lh);
     const top = titleTop - 38 - kh;
-    movable(ctx, "kicker", linesBox(fit, W / 2, top, lh), () => drawLines(ctx, fit, W / 2, top, lh, accent, p.style.color));
+    const color = tintOf("kicker", accent);
+    movable(ctx, "kicker", linesBox(fit, W / 2, top, lh), () => drawLines(ctx, fit, W / 2, top, lh, color, p.style.color));
     ctx.restore();
   }
 
@@ -75,9 +76,10 @@ export function lessonItem(ctx: Ctx, { brand, posts, frame }: RenderState, sl: S
     const nx = left - 4 * (size / 170);
     ctx.font = anton(size);
     ctx.textAlign = "left";
+    const color = tintOf("number", accent);
     movable(ctx, "number", textBox(ctx, num, nx, baseline, size), () => {
       shadowOn(ctx, 20);
-      ctx.fillStyle = accent;
+      ctx.fillStyle = color;
       ctx.fillText(num, nx, baseline);
       shadowOff(ctx);
     });
@@ -88,29 +90,36 @@ export function lessonItem(ctx: Ctx, { brand, posts, frame }: RenderState, sl: S
   const footerY = H - 56;
   const tlh = leadOf(p.style, 1.04);
   ctx.save();
-  const title = fitStyled(ctx, ls.title, p.style, maxW, 180, tlh, 76, 36);
+  const tst = lookOf("title", p.style);
+  const title = fitStyled(ctx, ls.title, tst, maxW, 180, tlh, 76, 36);
   const titleY = y;
-  movable(ctx, "title", linesBox(title, left, titleY, tlh, "left"), () => drawLines(ctx, title, left, titleY, tlh, p.style.color, accent, "left"));
+  movable(ctx, "title", linesBox(title, left, titleY, tlh, "left"), () => drawLines(ctx, title, left, titleY, tlh, tst.color, accentOf(brand, tst), "left"));
   ctx.restore();
   y += blockH(title.lines.length, title.size, tlh) + 30;
 
   const blh = 1.34;
   const paras = (ls.text || "").split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
-  drawBody(ctx, paras, left, y, maxW, footerY - 50 - y, blh, accent);
+  const bodyColor = tintOf("body", "#d9dcd9");
+  const bodyY = y;
+  movable(ctx, "body", { x: left, y: bodyY, w: maxW, h: Math.max(0, footerY - 50 - bodyY) }, () =>
+    drawBody(ctx, paras, left, bodyY, maxW, footerY - 50 - bodyY, blh, bodyColor, accent),
+  );
 
   // Footer: page name left, progress right.
   const page = (brand.name || "").toLowerCase();
   ctx.font = montserrat(900, 30);
   ctx.textAlign = "left";
+  const pageColor = tintOf("page", accent);
   movable(ctx, "page", textBox(ctx, page, left, footerY, 30), () => {
-    ctx.fillStyle = accent;
+    ctx.fillStyle = pageColor;
     ctx.fillText(page, left, footerY);
   });
   const progress = `${String(i + 1).padStart(2, "0")} / ${String(p.lessons.length).padStart(2, "0")}`;
   ctx.font = montserrat(800, 26);
   ctx.textAlign = "right";
+  const progressColor = tintOf("progress", "rgba(255,255,255,.55)");
   movable(ctx, "progress", textBox(ctx, progress, W - left, footerY, 26), () => {
-    ctx.fillStyle = "rgba(255,255,255,.55)";
+    ctx.fillStyle = progressColor;
     ctx.fillText(progress, W - left, footerY);
   });
 
@@ -118,7 +127,7 @@ export function lessonItem(ctx: Ctx, { brand, posts, frame }: RenderState, sl: S
 }
 
 /** Paragraphs at the largest size (40 down to 22) that fits maxW × maxH, separated by a gap. */
-function drawBody(ctx: Ctx, paras: string[], left: number, top: number, maxW: number, maxH: number, lh: number, accent: string) {
+function drawBody(ctx: Ctx, paras: string[], left: number, top: number, maxW: number, maxH: number, lh: number, color: string, accent: string) {
   if (!paras.length || maxH <= 0) return;
   let fits: Wrapped[] = [];
   let size = 40;
@@ -133,7 +142,7 @@ function drawBody(ctx: Ctx, paras: string[], left: number, top: number, maxW: nu
   ctx.font = archivo(500, size);
   let y = top;
   fits.forEach((f) => {
-    drawLines(ctx, f, left, y, lh, "#d9dcd9", accent, "left");
+    drawLines(ctx, f, left, y, lh, color, accent, "left");
     y += blockH(f.lines.length, size, lh) + gap();
   });
 }

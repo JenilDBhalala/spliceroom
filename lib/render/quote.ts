@@ -1,8 +1,7 @@
 import type { Region, RenderState } from "@/types/post";
-import { watermark } from "./meme";
 import {
-  type Ctx, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, fitText, imageOf, linesBox, montserrat, movable, playfair, textBox,
-  toks,
+  type Ctx, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, fitText, imageOf, linesBox, lookOf, montserrat, movable, playfair,
+  textBox, tintOf, toks,
 } from "./helpers";
 
 /** Big quote with author and source, on a darkened photo or a solid color. */
@@ -28,8 +27,9 @@ export function quote(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
 
   // Measure everything first, then center the whole block vertically.
   const lh = leadOf(p.style, 1.18);
+  const st = lookOf("quote", p.style);
   ctx.save();
-  const text = fitStyled(ctx, p.quote, p.style, W - 160, H * 0.5, lh, 84, 32);
+  const text = fitStyled(ctx, p.quote, st, W - 160, H * 0.5, lh, 84, 32);
   ctx.restore();
   const textH = blockH(text.lines.length, text.size, lh);
   const markH = 120;
@@ -46,16 +46,17 @@ export function quote(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
   ctx.font = playfair(300);
   ctx.textAlign = "center";
   const markY = y;
+  const markColor = tintOf("mark", accent);
   movable(ctx, "mark", { x: W / 2 - 70, y: markY + 10, w: 140, h: 110 }, () => {
-    ctx.fillStyle = accent;
+    ctx.fillStyle = markColor;
     ctx.fillText("“", W / 2, markY + 225);
   });
   y += markH + 34;
 
   ctx.save();
-  const again = fitStyled(ctx, p.quote, p.style, W - 160, H * 0.5, lh, 84, 32);
+  const again = fitStyled(ctx, p.quote, st, W - 160, H * 0.5, lh, 84, 32);
   const textY = y;
-  movable(ctx, "quote", linesBox(again, W / 2, textY, lh), () => drawLines(ctx, again, W / 2, textY, lh, p.style.color, accent));
+  movable(ctx, "quote", linesBox(again, W / 2, textY, lh), () => drawLines(ctx, again, W / 2, textY, lh, st.color, accentOf(brand, st)));
   ctx.restore();
   y += textH;
 
@@ -65,7 +66,8 @@ export function quote(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
     ctx.letterSpacing = "4px";
     ctx.font = montserrat(800, authorFit.size);
     const authorY = y;
-    movable(ctx, "author", linesBox(authorFit, W / 2, authorY, 1), () => drawLines(ctx, authorFit, W / 2, authorY, 1, accent, accent));
+    const color = tintOf("author", accent);
+    movable(ctx, "author", linesBox(authorFit, W / 2, authorY, 1), () => drawLines(ctx, authorFit, W / 2, authorY, 1, color, color));
     ctx.restore();
     y += authorH;
   }
@@ -73,11 +75,11 @@ export function quote(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
     ctx.font = archivo(500, 30);
     ctx.textAlign = "center";
     const sy = y + sourceH;
+    const color = tintOf("source", "rgba(255,255,255,.7)");
     movable(ctx, "source", textBox(ctx, p.source, W / 2, sy, 30), () => {
-      ctx.fillStyle = "rgba(255,255,255,.7)";
+      ctx.fillStyle = color;
       ctx.fillText(p.source, W / 2, sy);
     });
   }
-  if (p.watermark) watermark(ctx, brand, frame);
   return regs;
 }

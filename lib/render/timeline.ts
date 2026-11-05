@@ -1,6 +1,7 @@
 import type { Region, RenderState } from "@/types/post";
 import {
   type Ctx, blockH, drawContain, drawCover, fitStyled, leadOf, fontFace, imageOf, montserrat, movable, shadowOff, shadowOn, textBox, uploaded,
+  lookOf, tintOf,
 } from "./helpers";
 
 export function timeline(ctx: Ctx, { posts, frame }: RenderState): Region[] {
@@ -32,15 +33,16 @@ export function timeline(ctx: Ctx, { posts, frame }: RenderState): Region[] {
       movable(ctx, `title${i}`, { x: 225 - w / 2, y: cy - h / 2, w, h }, () => drawContain(ctx, logo, 50 + 175, cy, 350, rh * 0.55));
     } else {
       const lh = leadOf(style, 1.0);
+      const st = lookOf(`title${i}`, style);
       ctx.save();
-      const fit = fitStyled(ctx, r.title, style, 380, rh * 0.55, lh, 64, 20);
+      const fit = fitStyled(ctx, r.title, st, 380, rh * 0.55, lh, 64, 20);
       const left = 60;
       const bh = blockH(fit.lines.length, fit.size, lh);
       const tw = Math.max(0, ...fit.lines.map((L) => L.w));
       movable(ctx, `title${i}`, { x: left, y: cy - bh / 2, w: tw, h: bh + fit.size * 0.22 }, () => fit.lines.forEach((L, li) => {
-        ctx.font = fontFace(style.font, fit.size, style.weight);
+        ctx.font = fontFace(st.font, fit.size, st.weight);
         ctx.textAlign = "left";
-        ctx.fillStyle = style.color;
+        ctx.fillStyle = st.color;
         ctx.fillText(
           L.words.map((w) => w.t).join(" "),
           left,
@@ -52,8 +54,9 @@ export function timeline(ctx: Ctx, { posts, frame }: RenderState): Region[] {
     const ys = Math.min(100, rh * 0.28);
     ctx.font = montserrat(900, ys);
     ctx.textAlign = "right";
+    const yearColor = tintOf(`year${i}`, "#ffffff");
     movable(ctx, `year${i}`, textBox(ctx, r.year || "", W - 50, cy + ys * 0.36, ys), () => {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = yearColor;
       ctx.fillText(r.year || "", W - 50, cy + ys * 0.36);
     });
     shadowOff(ctx);
