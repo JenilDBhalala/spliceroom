@@ -1,4 +1,4 @@
-import type { Posts, SlideKind, StyledKey } from "@/types/post";
+import type { Brand, Posts, SlideKind, StyledKey } from "@/types/post";
 import { toastUndo } from "@/lib/history";
 import { POST_OF } from "@/lib/render";
 import { useEditor, useSlides } from "@/lib/store";
@@ -19,6 +19,7 @@ import SelectedText from "./panels/SelectedText";
 import StyleSection from "./panels/StyleSection";
 import TimelinePanel from "./panels/TimelinePanel";
 import TweetPanel from "./panels/TweetPanel";
+import Segmented from "./fields/Segmented";
 import Toggle from "./fields/Toggle";
 import { Note, PanelHeader, SlideCount } from "./panels/ui";
 
@@ -111,9 +112,27 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
 /** "@pagename" in a corner, on any template (drag it anywhere once it shows). */
 function PageNameToggle({ post }: { post: keyof Posts }) {
   const on = useEditor((s) => !!(s.posts[post] as { watermark?: boolean }).watermark);
-  const name = useEditor((s) => s.brand.name);
+  const brand = useEditor((s) => s.brand);
   const update = useEditor((s) => s.update);
-  return <Toggle label={`Show @${name || "yourpage"} on the post`} checked={on} onChange={(watermark) => update(["posts", post], { watermark })} />;
+  const name = brand.name || "yourpage";
+  const hasLogo = !!brand.logo.src;
+  const as = brand.markAs ?? (hasLogo ? "logo" : "handle");
+  const options: [NonNullable<Brand["markAs"]>, string][] = [
+    ["handle", `@${name}`],
+    ["name", name],
+    ...(hasLogo ? [["logo", "Logo"] as [NonNullable<Brand["markAs"]>, string]] : []),
+  ];
+  return (
+    <>
+      <Toggle label="Show your page name on the post" checked={on} onChange={(watermark) => update(["posts", post], { watermark })} />
+      {on && (
+        <>
+          <Segmented<NonNullable<Brand["markAs"]>> label="Show as" value={as === "logo" && !hasLogo ? "handle" : as} options={options} onChange={(markAs) => update(["brand"], { markAs })} />
+          {!hasLogo && <Note>Add a logo image under Profile to show it here instead.</Note>}
+        </>
+      )}
+    </>
+  );
 }
 
 /** Says text can be dragged, and puts it all back once something was moved. */

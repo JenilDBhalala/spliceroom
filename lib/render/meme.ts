@@ -1,7 +1,7 @@
 import type { Brand, Frame, Region, RenderState } from "@/types/post";
 import {
   type Ctx, type Wrapped, accentOf, archivo, blockH, drawCover, drawLines, fitStyled, leadOf, imageOf, linesBox, lookOf, movable, shadowOff, shadowOn, textBox,
-  tintOf,
+  tintOf, uploaded,
 } from "./helpers";
 
 export function meme(ctx: Ctx, state: RenderState): Region[] {
@@ -73,9 +73,22 @@ function drawOutlined(ctx: Ctx, res: Wrapped, cx: number, top: number, lh: numbe
 
 /** Small page handle in a bottom corner (drag it anywhere). */
 export function watermark(ctx: Ctx, brand: Brand, { W, H }: Frame, corner: "left" | "right" = "right") {
-  if (!brand.name) return;
-  const text = `@${brand.name}`;
+  const logo = uploaded(brand.logo);
+  const as = brand.markAs ?? (logo ? "logo" : "handle");
   const x = corner === "right" ? W - 28 : 28;
+  if (as === "logo" && logo) {
+    const sc = Math.min(220 / logo.naturalWidth, 56 / logo.naturalHeight);
+    const [w, h] = [logo.naturalWidth * sc, logo.naturalHeight * sc];
+    const left = corner === "right" ? x - w : x;
+    movable(ctx, "watermark", { x: left, y: H - 24 - h, w, h }, () => {
+      shadowOn(ctx, 8);
+      ctx.drawImage(logo, left, H - 24 - h, w, h);
+      shadowOff(ctx);
+    });
+    return;
+  }
+  if (!brand.name) return;
+  const text = as === "name" ? brand.name : `@${brand.name}`;
   ctx.font = archivo(600, 28);
   ctx.textAlign = corner;
   const color = tintOf("watermark", "rgba(255,255,255,.75)");

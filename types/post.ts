@@ -111,6 +111,8 @@ export interface Brand {
   cta: string;
   /** Download size: 1 = 1080 wide, 2 = 2160 wide. */
   exportScale: 1 | 2;
+  /** How the page name shows on posts; unset = the logo when there is one, else @handle. */
+  markAs?: "handle" | "name" | "logo";
 }
 
 export interface HeadlinePost {
