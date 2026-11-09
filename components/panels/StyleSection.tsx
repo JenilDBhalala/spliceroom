@@ -2,6 +2,7 @@ import type { StyledKey, TextStyle } from "@/types/post";
 import { useEditor } from "@/lib/store";
 import ColorField from "@/components/fields/ColorField";
 import FontPicker from "@/components/fields/FontPicker";
+import Slider from "@/components/fields/Slider";
 import Toggle from "@/components/fields/Toggle";
 import TypeControls from "@/components/fields/TypeControls";
 import { Note } from "./ui";
@@ -11,6 +12,8 @@ import { Note } from "./ui";
 export default function StyleSection({ postKey, note, flat = false }: { postKey: StyledKey; note?: string; flat?: boolean }) {
   const st = useEditor((s) => s.posts[postKey].style);
   const theme = useEditor((s) => s.brand.accent);
+  // Classic memes draw their text outlined; its color and thickness are part of the style.
+  const outlined = useEditor((s) => postKey === "meme" && s.posts.meme.mode === "classic");
   const update = useEditor((s) => s.update);
   const resetStyle = useEditor((s) => s.resetStyle);
   const set = (patch: Partial<TextStyle>) => update(["posts", postKey, "style"], patch);
@@ -47,6 +50,20 @@ export default function StyleSection({ postKey, note, flat = false }: { postKey:
             className="h-8 w-full accent-accent"
           />
         </div>
+        {outlined && (
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
+            <ColorField label="Outline color" value={st.effectColor ?? "#000000"} onChange={(effectColor) => set({ effectColor })} />
+            <Slider
+              label="Outline thickness"
+              value={st.stroke ?? 0.13}
+              min={0}
+              max={0.3}
+              step={0.01}
+              format={(v) => (v ? `${Math.round(v * 100)}` : "Off")}
+              onChange={(stroke) => set({ stroke, effect: stroke ? undefined : "none" })}
+            />
+          </div>
+        )}
         <Toggle label="ALL CAPS" checked={st.caps} onChange={(caps) => set({ caps })} />
         <button type="button" className="btn btn-small btn-ghost self-start" onClick={() => resetStyle(postKey)}>
           Reset style

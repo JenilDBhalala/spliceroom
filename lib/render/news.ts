@@ -1,7 +1,7 @@
 import type { Region, RenderState, Slide } from "@/types/post";
 import {
   type Ctx, type Wrapped, accentOf, blockH, drawCover, drawLines, fadeBottom, fontFace, imageOf, montserrat, movable, shadowOff, shadowOn, swipeTag,
-  toks, wrap, lookOf, tintOf,
+  toks, wrap, lookOf, tintOf, newsTag, sourceLine, SOURCE_H, TAG_H,
 } from "./helpers";
 
 export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -57,14 +57,18 @@ export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Regio
   const k = Math.min(st.scale || 1, (W - 60) / maxW);
   let sizes = lines.map((l) => Math.min(210, (100 * maxW) / Math.max(1, ctx.measureText(l).width)) * k);
   let total = sizes.reduce((a, s) => a + s * 0.73, 0) + gap * (lines.length - 1);
-  const maxH = H * 0.4;
+  // A tag above and a source line below take room from the headline.
+  const tagH = p.tag?.trim() ? TAG_H : 0;
+  const srcH = p.source?.trim() ? SOURCE_H : 0;
+  const bottom = H - 105 - srcH;
+  const maxH = H * 0.4 - tagH - srcH;
   if (total > maxH) {
     const f = (maxH - gap * (lines.length - 1)) / (total - gap * (lines.length - 1));
     sizes = sizes.map((s) => s * f);
     total = maxH;
   }
-  movable(ctx, "text", { x: 75, y: H - 105 - total, w: maxW, h: total + 20 }, () => {
-    let y = H - 105 - total;
+  movable(ctx, "text", { x: 75, y: bottom - total, w: maxW, h: total + 20 }, () => {
+    let y = bottom - total;
     ctx.fillStyle = st.color;
     ctx.textAlign = "center";
     lines.forEach((l, i) => {
@@ -76,6 +80,8 @@ export function newsCover(ctx: Ctx, { brand, posts, frame }: RenderState): Regio
     });
   });
   ctx.restore();
+  if (tagH) newsTag(ctx, p.tag!, accentOf(brand, st), W / 2, bottom - total - tagH);
+  if (srcH) sourceLine(ctx, p.source!, W / 2, bottom + srcH);
   if (p.swipe) swipeTag(ctx, accentOf(brand, st), "SWIPE", W - 70, H - 42);
   return regs;
 }

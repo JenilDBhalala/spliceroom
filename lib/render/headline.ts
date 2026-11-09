@@ -1,7 +1,7 @@
 import type { Brand, Region, RenderState } from "@/types/post";
 import {
   type Ctx, accentOf, bebas, blockH, drawCover, drawLines, fadeBottom, fitStyled, leadOf, imageOf, linesBox, montserrat, movable, shadowOff,
-  shadowOn, textBox, uploaded, lookOf, tintOf,
+  shadowOn, textBox, uploaded, lookOf, tintOf, newsTag, sourceLine, SOURCE_H, TAG_H,
 } from "./helpers";
 
 /** Page logo, or the page name in the accent color, top left. */
@@ -44,10 +44,17 @@ export function hlCover(ctx: Ctx, { brand, posts, frame }: RenderState): Region[
   const lh = leadOf(p.style, 1.1);
   ctx.save();
   const st = lookOf("text", p.style);
-  const fit = fitStyled(ctx, p.text, st, W - 150, H * 0.27, lh, 96, 34);
-  const top = H * 0.715 + (H * 0.27 - blockH(fit.lines.length, fit.size, lh)) / 2;
+  // Tag above and source below share the headline's space; the whole group stays centered in it.
+  const tagH = p.tag?.trim() ? TAG_H : 0;
+  const srcH = p.source?.trim() ? SOURCE_H : 0;
+  const fit = fitStyled(ctx, p.text, st, W - 150, H * 0.27 - tagH - srcH, lh, 96, 34);
+  const textH = blockH(fit.lines.length, fit.size, lh);
+  const groupTop = H * 0.715 + (H * 0.27 - (tagH + textH + srcH)) / 2;
+  const top = groupTop + tagH;
   movable(ctx, "text", linesBox(fit, W / 2, top, lh), () => drawLines(ctx, fit, W / 2, top, lh, st.color, accentOf(brand, st)));
   ctx.restore();
+  if (tagH) newsTag(ctx, p.tag!, accentOf(brand, p.style), W / 2, groupTop);
+  if (srcH) sourceLine(ctx, p.source!, W / 2, top + textH + srcH - 4);
   return [{ x: 0, y: 0, w: W, h: H, path: ["posts", "headline", "img"] }];
 }
 

@@ -19,9 +19,20 @@ const SHAPES = [
   ["original", "Original"],
 ] as const;
 const THEMES = [
-  ["dark", "Dark"],
   ["light", "Light"],
+  ["dim", "Dim"],
+  ["dark", "Dark"],
 ] as const;
+const BADGES = [
+  ["blue", "Blue"],
+  ["gold", "Gold"],
+  ["grey", "Grey"],
+] as const;
+
+function CountField({ label, field }: { label: string; field: "views" | "reposts" | "likes" | "bookmarks" }) {
+  const [value, setValue] = useField<string | undefined>(P, field);
+  return <TextField label={label} value={value ?? ""} onChange={setValue} />;
+}
 
 export default function TweetPanel() {
   const theme = useEditor((s) => s.posts.tweet.theme);
@@ -37,6 +48,9 @@ export default function TweetPanel() {
   const [autoDate, setAutoDate] = useField<boolean>(P, "autoDate");
   const [imgShape, setImgShape] = useField<TweetPost["imgShape"]>(P, "imgShape");
   const [background, setBackground] = useField<string>(P, "background");
+  const [badge, setBadge] = useField<TweetPost["badge"]>(P, "badge");
+  const brandVerified = useEditor((s) => s.brand.verified);
+  const ticked = useBrand ? brandVerified : verified;
   // Keep the clock current: re-render the note and redraw the canvas as minutes pass.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -87,9 +101,21 @@ export default function TweetPanel() {
               <TextField label="Handle" value={handle} onChange={setHandle} />
             </Row>
             <ImageSlot label="Profile picture" path={[...P, "avatar"]} empty="Optional. Without one, the first letter of the name is used." />
-            <Toggle label="Blue tick" checked={verified} onChange={setVerified} />
+            <Toggle label="Tick next to the name" checked={verified} onChange={setVerified} />
           </>
         )}
+        {ticked && <Segmented<NonNullable<TweetPost["badge"]>> label="Tick color" value={badge ?? "blue"} options={BADGES} onChange={setBadge} />}
+      </Group>
+      <Group title="Counts">
+        <Note>Shown under the post like on X. Leave any empty to hide it; 12400 shows as 12.4K.</Note>
+        <Row>
+          <CountField label="Views" field="views" />
+          <CountField label="Reposts" field="reposts" />
+        </Row>
+        <Row>
+          <CountField label="Likes" field="likes" />
+          <CountField label="Bookmarks" field="bookmarks" />
+        </Row>
       </Group>
       <Group title="Look">
         <Segmented<TweetPost["theme"]> label="Card" value={theme} options={THEMES} onChange={setTweetTheme} />

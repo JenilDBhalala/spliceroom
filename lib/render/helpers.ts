@@ -1,4 +1,4 @@
-import type { Brand, Frame, Framing, ImageSlot, PhotoFx, PostSize, Region, SlotPath, TextBlock, TextLooks, TextMoves, TextStyle } from "@/types/post";
+import type { Brand, Frame, Framing, ImageSlot, PhotoFx, PostSize, Region, SlotPath, TextBlock, TextLook, TextLooks, TextMoves, TextStyle } from "@/types/post";
 import { imageFor } from "@/lib/images";
 import { F, fontFace } from "./fonts";
 import { placeholderImage } from "./placeholder";
@@ -42,16 +42,26 @@ let moving: {
   regions: Region[];
   /** What lookOf / tintOf said about each block, for its region. */
   blocks: Map<string, Pick<TextBlock, "look" | "base">>;
+  /** Blocks whose template draws their outline itself. */
+  outlines: Set<string>;
 } | null = null;
 
 export function beginMoves(moves: TextMoves | undefined, looks: TextLooks | undefined, path: SlotPath, prefix: string, frame: Frame) {
-  moving = { moves: moves ?? {}, looks: looks ?? {}, path, prefix, frame, regions: [], blocks: new Map() };
+  moving = { moves: moves ?? {}, looks: looks ?? {}, path, prefix, frame, regions: [], blocks: new Map(), outlines: new Set() };
 }
 
-/** The template's text style for one block, with that block's own look on top. Call before laying the block out. */
-export function lookOf(key: string, base: TextStyle): TextStyle {
+/**
+ * The template's text style for one block, with that block's own look on top. Call before laying the block out.
+ * `outlines`: the template strokes this block itself (memes), so `movable` leaves the outline to it.
+ */
+export function lookOf(key: string, base: TextStyle, outlines = false): TextStyle {
   if (!moving) return base;
-  moving.blocks.set(key, { look: "style", base: { color: base.color, font: base.font, accent: base.accent, caps: base.caps } });
+  const effect = base.effect ?? (outlines ? "outline" : "none");
+  moving.blocks.set(key, {
+    look: "style",
+    base: { color: base.color, font: base.font, accent: base.accent, caps: base.caps, effect, effectColor: base.effectColor ?? "#000000", stroke: base.stroke ?? 0.13 },
+  });
+  if (outlines) moving.outlines.add(key);
   const own = moving.looks[`${moving.prefix}.${key}`];
   return own ? { ...base, ...own } : base;
 }
@@ -97,15 +107,71 @@ export function movable(ctx: Ctx, key: string, box: Box, draw: () => void): (b: 
     ctx.translate(-cx, -cy);
   }
   if (opacity < 1) ctx.globalAlpha *= opacity;
+  const look = moving.looks[k];
+  const restore = look?.effect ? withEffect(ctx, look, box, moving.outlines.has(key)) : undefined;
   draw();
+  restore?.();
   ctx.restore();
   // A little slack around the text makes it easier to grab.
   const pad = 16;
   const w = box.w * s + pad * 2;
   const h = box.h * s + pad * 2;
   const block = moving.blocks.get(key) ?? { look: "none", base: { color: "" } };
-  moving.regions.push({ x: cx + dx - w / 2, y: cy + dy - h / 2, w, h, path: moving.path, text: { key: k, ...block, home: { cx: cx / W, cy: cy / H } } });
+  moving.regions.push({ x: cx + dx - w / 2, y: cy + dy - h / 2, w, h, path: moving.path, rotate: m?.r, text: { key: k, ...block, home: { cx: cx / W, cy: cy / H } } });
   return (b) => ({ x: cx + dx + (b.x - cx) * s, y: cy + dy + (b.y - cy) * s, w: b.w * s, h: b.h * s });
+}
+
+/**
+ * A block's own text effect, set up around its drawing: a box behind it, a shadow or glow,
+ * or an outline (every fillText in the block also strokes). Returns the undo for the outline.
+ */
+function withEffect(ctx: Ctx, look: TextLook, box: Box, outlined: boolean): (() => void) | undefined {
+  const color = look.effectColor ?? "#000000";
+  if (look.effect === "box") {
+    const pad = Math.min(36, box.h * 0.18);
+    ctx.save();
+    shadowOff(ctx);
+    ctx.fillStyle = color;
+    rrect(ctx, box.x - pad, box.y - pad, box.w + pad * 2, box.h + pad * 2, pad * 0.9);
+    ctx.fill();
+    ctx.restore();
+  } else if (look.effect === "shadow") setShadow(ctx, hexAlpha(color, 0.75), 14 + box.h * 0.06, 4);
+  else if (look.effect === "glow") setShadow(ctx, color, 24 + box.h * 0.12, 0);
+  else if (look.effect === "outline" && !outlined) {
+    // Every fillText in the block strokes now and fills at the end, so a thick outline never covers a letter.
+    const fill = ctx.fillText;
+    const k = look.stroke ?? 0.13;
+    const fills: (() => void)[] = [];
+    ctx.fillText = function (text: string, x: number, y: number, maxWidth?: number) {
+      const px = +(/(\d+(?:\.\d+)?)px/.exec(this.font)?.[1] ?? 40);
+      this.save();
+      this.strokeStyle = color;
+      this.lineWidth = Math.max(2, px * k);
+      this.lineJoin = "round";
+      this.miterLimit = 2;
+      this.strokeText(text, x, y, maxWidth);
+      this.restore();
+      const st = { t: this.getTransform(), font: this.font, fillStyle: this.fillStyle, align: this.textAlign, base: this.textBaseline, ls: this.letterSpacing, alpha: this.globalAlpha };
+      fills.push(() => {
+        this.save();
+        this.setTransform(st.t);
+        Object.assign(this, { font: st.font, fillStyle: st.fillStyle, textAlign: st.align, textBaseline: st.base, letterSpacing: st.ls, globalAlpha: st.alpha });
+        fill.call(this, text, x, y, maxWidth);
+        this.restore();
+      });
+    };
+    return () => {
+      // Back to the prototype's fillText, then the letters on top of every outline.
+      delete (ctx as Partial<Ctx>).fillText;
+      fills.forEach((f) => f());
+    };
+  }
+}
+
+/** #rrggbb plus an alpha, for soft shadows in the chosen color. */
+export function hexAlpha(hex: string, a: number) {
+  const n = parseInt(hex.slice(1), 16);
+  return Number.isNaN(n) || hex.length !== 7 ? `rgba(0,0,0,${a})` : `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
 /** The box wrapped lines cover when drawn with drawLines at (x0, top). */
@@ -237,7 +303,9 @@ export function rrect(ctx: Ctx, x: number, y: number, w: number, h: number, r: n
 
 /** Canvas shadows ignore the transform, so blur and offset are scaled by hand. */
 export function setShadow(ctx: Ctx, color: string, blur: number, offsetY: number) {
-  const k = ctx.getTransform().a;
+  // Shadows are in screen pixels; the scale survives a rotated layer.
+  const m = ctx.getTransform();
+  const k = Math.hypot(m.a, m.b);
   ctx.shadowColor = color;
   ctx.shadowBlur = blur * k;
   ctx.shadowOffsetY = offsetY * k;
@@ -364,8 +432,8 @@ export function drawLines(
 }
 
 /** Instagram-style blue verified badge centered on (x, y); `s` scales the 25px-radius original. */
-export function verifiedBadge(ctx: Ctx, x: number, y: number, s = 1) {
-  ctx.fillStyle = "#3897f0";
+export function verifiedBadge(ctx: Ctx, x: number, y: number, s = 1, color = "#3897f0") {
+  ctx.fillStyle = color;
   ctx.beginPath();
   for (let k = 0; k < 24; k++) {
     const a = (k / 24) * Math.PI * 2;
@@ -396,6 +464,55 @@ export function drawAvatar(ctx: Ctx, slot: ImageSlot, cx: number, cy: number, r:
   const im = uploaded(slot);
   if (im) drawCover(ctx, im, slot, cx - r, cy - r, r * 2, r * 2);
   ctx.restore();
+}
+
+/** Height a news tag pill takes, plus its gap to the headline. */
+export const TAG_H = 62 + 22;
+/** Height a source line takes, plus its gap to the headline. */
+export const SOURCE_H = 30 + 22;
+
+/** A label pill like "BREAKING", centered on cx with its top at y; the pill takes the accent color. */
+export function newsTag(ctx: Ctx, text: string, accent: string, cx: number, y: number) {
+  const t = text.trim().toUpperCase();
+  ctx.font = montserrat(900, 32);
+  ctx.letterSpacing = "3px";
+  const w = ctx.measureText(t).width + 52;
+  ctx.letterSpacing = "0px";
+  const bg = tintOf("tag", accent);
+  movable(ctx, "tag", { x: cx - w / 2, y, w, h: 62 }, () => {
+    ctx.fillStyle = bg;
+    rrect(ctx, cx - w / 2, y, w, 62, 10);
+    ctx.fill();
+    ctx.font = montserrat(900, 32);
+    ctx.letterSpacing = "3px";
+    ctx.textAlign = "center";
+    // Dark text on a light pill, white on a dark one.
+    ctx.fillStyle = shadeLight(bg) ? "#0b0b0b" : "#ffffff";
+    ctx.fillText(t, cx + 1.5, y + 43);
+    ctx.letterSpacing = "0px";
+  });
+}
+
+/** A small credit line ("Source: Variety") with its baseline at y. */
+export function sourceLine(ctx: Ctx, text: string, cx: number, y: number) {
+  ctx.font = archivo(500, 30);
+  ctx.textAlign = "center";
+  const color = tintOf("source", "rgba(255,255,255,.75)");
+  movable(ctx, "source", textBox(ctx, text.trim(), cx, y, 30), () => {
+    ctx.font = archivo(500, 30);
+    ctx.textAlign = "center";
+    shadowOn(ctx, 10);
+    ctx.fillStyle = color;
+    ctx.fillText(text.trim(), cx, y);
+    shadowOff(ctx);
+  });
+}
+
+/** True for light #rrggbb colors (dark text reads better on them). */
+function shadeLight(c: string) {
+  const n = parseInt(c.slice(1, 7), 16);
+  if (!/^#[0-9a-f]{6}/i.test(c) || Number.isNaN(n)) return false;
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.55;
 }
 
 export function swipeTag(ctx: Ctx, accent: string, text: string, x: number, y: number) {

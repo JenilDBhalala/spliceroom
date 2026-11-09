@@ -8,6 +8,7 @@ import BrandPanel from "./panels/BrandPanel";
 import ComparePanel from "./panels/ComparePanel";
 import CustomPanel from "./panels/CustomPanel";
 import FollowPanel from "./panels/FollowPanel";
+import { AddToSlide, LayerEditor } from "./panels/Layers";
 import HeadlinePanel from "./panels/HeadlinePanel";
 import LessonsPanel from "./panels/LessonsPanel";
 import ListPanel from "./panels/ListPanel";
@@ -15,6 +16,7 @@ import MemePanel from "./panels/MemePanel";
 import NewsPanel from "./panels/NewsPanel";
 import PosterPanel from "./panels/PosterPanel";
 import QuotePanel from "./panels/QuotePanel";
+import ScenePanel from "./panels/ScenePanel";
 import SelectedText from "./panels/SelectedText";
 import StyleSection from "./panels/StyleSection";
 import TimelinePanel from "./panels/TimelinePanel";
@@ -40,6 +42,7 @@ const TITLES: Record<SlideKind, string> = {
   quote: "Quote",
   compare: "Comparison",
   follow: "Follow card",
+  scene: "Movie scene",
 };
 
 /** Slides where the text style only reaches the cover, so the section says so. */
@@ -49,6 +52,7 @@ const STYLE_NOTES: Partial<Record<SlideKind, string>> = {
   newsStory: "Applies to the cover headline and highlight color.",
   timeline: "Applies to the movie titles.",
   tweet: "Applies to the post text.",
+  scene: "Applies to the caption above the still. Tap the subtitle on the post for its own font and color.",
 };
 
 /** Which text style the current slide edits (null on the blank canvas, where each layer has its own). */
@@ -72,6 +76,7 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
     <>
       <PanelHeader title={TITLES[k]}>{slides.length > 1 && <SlideCount sel={sel} total={slides.length} />}</PanelHeader>
       {textSel?.key.startsWith(`${k}.`) && <SelectedText key={textSel.key} block={textSel} />}
+      {k !== "custom" && <LayerEditor />}
       <Note>{templateInfo(fmt).howto}</Note>
       {k !== "custom" && <TextPositions post={POST_OF[k]} />}
       {k !== "follow" && <PageNameToggle post={k === "custom" ? "custom" : POST_OF[k]} />}
@@ -86,7 +91,8 @@ export function SlideFields({ withStyle = true }: { withStyle?: boolean }) {
       {k === "quote" && <QuotePanel />}
       {k === "compare" && <ComparePanel />}
       {k === "follow" && <FollowPanel />}
-      {k === "custom" && <CustomPanel />}
+      {k === "scene" && <ScenePanel />}
+      {k === "custom" ? <CustomPanel /> : <AddToSlide />}
       {withStyle && style.key && <StyleSection key={style.key} postKey={style.key} note={style.note} />}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <span className="flex items-center gap-2 text-xs text-muted">

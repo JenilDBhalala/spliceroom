@@ -1,9 +1,10 @@
-import type { SlideKind, TextBlock, TextLook, TextLooks, TextMove, TextMoves } from "@/types/post";
+import type { SlideKind, TextBlock, TextEffect, TextLook, TextLooks, TextMove, TextMoves } from "@/types/post";
 import { toastUndo } from "@/lib/history";
 import { POST_OF } from "@/lib/render";
 import { useEditor } from "@/lib/store";
 import ColorField from "@/components/fields/ColorField";
 import FontPicker from "@/components/fields/FontPicker";
+import Segmented from "@/components/fields/Segmented";
 import Slider from "@/components/fields/Slider";
 import Toggle from "@/components/fields/Toggle";
 import { Group, Note } from "./ui";
@@ -47,6 +48,45 @@ function nameOf(key: string) {
   return NAMES[part] ?? part;
 }
 
+const EFFECTS = [
+  ["none", "None"],
+  ["outline", "Outline"],
+  ["shadow", "Shadow"],
+  ["glow", "Glow"],
+  ["box", "Box"],
+] as const;
+const EFFECT_COLOR: Record<TextEffect, string> = { none: "", outline: "Outline color", shadow: "Shadow color", glow: "Glow color", box: "Box color" };
+
+/** Outline, shadow, glow or a box behind the text, like a design app's text effects. */
+function EffectFields({ look, base, onChange }: { look: TextLook; base: TextBlock["base"]; onChange: (patch: TextLook) => void }) {
+  const theme = useEditor((s) => s.brand.accent);
+  const effect = look.effect ?? base.effect ?? "none";
+  const color = look.effectColor ?? base.effectColor ?? "#000000";
+  return (
+    <>
+      <Segmented<TextEffect>
+        label="Effect"
+        value={effect}
+        options={EFFECTS}
+        // A glow in black would look like a shadow, so it starts in the theme color.
+        onChange={(e) => onChange({ effect: e, ...(e === "glow" && !look.effectColor ? { effectColor: theme } : {}) })}
+      />
+      {effect !== "none" && <ColorField label={EFFECT_COLOR[effect]} value={toHex(color)} onChange={(effectColor) => onChange({ effectColor })} />}
+      {effect === "outline" && (
+        <Slider
+          label="Outline thickness"
+          value={look.stroke ?? base.stroke ?? 0.13}
+          min={0.03}
+          max={0.3}
+          step={0.01}
+          format={(v) => `${Math.round(v * 100)}`}
+          onChange={(stroke) => onChange({ stroke })}
+        />
+      )}
+    </>
+  );
+}
+
 const without = <T,>(o: Record<string, T> | undefined, key: string) => Object.fromEntries(Object.entries(o ?? {}).filter(([k]) => k !== key));
 
 /** Color inputs need #rrggbb; template colors may be rgba() or short hex. */
@@ -85,6 +125,7 @@ export default function SelectedText({ block }: { block: TextBlock }) {
         </>
       )}
       {block.look === "color" && <ColorField label="Color" value={toHex(look.color ?? base.color)} onChange={(color) => setLook({ color })} />}
+      {block.look !== "none" && <EffectFields look={look} base={base} onChange={setLook} />}
       {block.look === "none" && <Note>This part keeps the template&apos;s colors. You can still move, resize, turn and fade it.</Note>}
       <Slider label="Size" value={move.s} min={0.3} max={3} step={0.05} format={(v) => `${Math.round(v * 100)}%`} onChange={(s) => setMove({ s })} />
       <Slider label="Opacity" value={look.opacity ?? 1} min={0.1} max={1} step={0.05} format={(v) => `${Math.round(v * 100)}%`} onChange={(opacity) => setLook({ opacity })} />

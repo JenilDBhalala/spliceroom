@@ -7,7 +7,7 @@ import type {
 } from "@/types/post";
 import { idbDel, idbGet, idbSet } from "@/lib/db";
 import { readImageFile } from "@/lib/images";
-import { FRAMES, slidesFor } from "@/lib/render";
+import { FRAMES, layersPath, slidesFor } from "@/lib/render";
 
 /* ---------- slot factories ---------- */
 
@@ -76,11 +76,22 @@ export const DEFAULT_STYLES: Record<StyledKey, TextStyle> = {
   quote: style("Playfair Display", "#ffffff", false),
   compare: style("Montserrat"),
   follow: style("Anton"),
+  scene: style("Archivo", "#ffffff", false),
 };
 const CAPTION_TEXT = { light: "#111111", dark: "#ffffff" } as const;
 const captionStyle = (bar: "light" | "dark") => style("Archivo", CAPTION_TEXT[bar], false);
-const TWEET_LIGHT = { color: "#0f1419", background: "#ffffff" };
-const TWEET_DARK = { color: "#e7e9ea", background: "#000000" };
+/** Each tweet theme's default text color and background. */
+const TWEET_THEMES = {
+  light: { color: "#0f1419", background: "#ffffff" },
+  dark: { color: "#e7e9ea", background: "#000000" },
+  dim: { color: "#f7f9f9", background: "#10171e" },
+};
+/** Whether dark or light text reads better on a #rrggbb color. */
+const shadeOf = (hex: string): "light" | "dark" => {
+  const n = parseInt(hex.slice(1, 7), 16);
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.55 ? "light" : "dark";
+};
 const sameStyle = (a: TextStyle, b: TextStyle) => (Object.keys(a) as (keyof TextStyle)[]).every((k) => a[k] === b[k]);
 
 /* ---------- blank canvas ---------- */
@@ -300,7 +311,7 @@ const defaultPosts = (): Posts => ({
   tweet: {
     style: DEFAULT_STYLES.tweet,
     theme: "dark",
-    background: TWEET_DARK.background,
+    background: TWEET_THEMES.dark.background,
     useBrand: true,
     name: "Movie Buff",
     handle: "moviebuff",
@@ -336,6 +347,16 @@ const defaultPosts = (): Posts => ({
   follow: { style: DEFAULT_STYLES.follow },
   // Last so earlier templates keep their placeholder colors.
   custom: CANVAS_PRESETS[0].make(),
+  scene: {
+    style: DEFAULT_STYLES.scene,
+    img: slot("movie still"),
+    bars: "wide",
+    subtitle: "I told you this movie would change your life.",
+    subColor: "yellow",
+    italic: false,
+    caption: "POV: you finally watched the movie everyone told you about",
+    watermark: true,
+  },
 });
 
 /* ---------- immutable path helpers ---------- */
@@ -377,7 +398,7 @@ export interface EditorState {
   mode: "slide" | "brand";
   /** Image box the user last touched; Ctrl+V pastes into it. */
   activeSlot: SlotPath | null;
-  /** Selected blank-canvas layer (null = background). */
+  /** Selected layer on the current slide: blank-canvas layers, or text/photos/stickers added to a template (null = none). */
   layerSel: string | null;
   /** Template text block tapped on the preview, whose own look the panel edits. */
   textSel: TextBlock | null;
@@ -394,16 +415,17 @@ export interface EditorState {
   resetTemplate: (key: keyof Posts) => void;
   /** Switch meme layout; a still-default text style follows the layout's default. */
   setMemeMode: (mode: "classic" | "caption") => void;
-  /** Switch caption bar color; a still-default text color follows it. */
-  setMemeBar: (bar: "light" | "dark") => void;
-  /** Switch tweet theme; text color and background follow if they were the other theme's defaults. */
-  setTweetTheme: (theme: "dark" | "light") => void;
+  /** Set the caption bar color; a still-default text color flips to stay readable on it. */
+  setMemeBar: (color: string) => void;
+  /** Switch tweet theme; text color and background follow if they were the old theme's defaults. */
+  setTweetTheme: (theme: "dark" | "light" | "dim") => void;
   select: (i: number) => void;
   setMode: (mode: "slide" | "brand") => void;
   setActiveSlot: (path: SlotPath | null) => void;
   setLayerSel: (id: string | null) => void;
   setTextSel: (block: TextBlock | null) => void;
-  addLayer: (kind: Layer["kind"]) => void;
+  /** Add text, a photo, or a sticker (an emoji) to the current slide. */
+  addLayer: (kind: Layer["kind"] | "sticker", emoji?: string) => void;
   duplicateLayer: (id: string) => void;
   removeLayer: (id: string) => void;
   /** Move a layer toward the front (+1) or back (-1). */
@@ -532,7 +554,7 @@ export const useEditor = create<EditorState>()(
       },
       setImage: (path, src) => get().update(path, { src, zoom: 1, ox: 0, oy: 0 }),
       resetFraming: (path) => get().update(path, { zoom: 1, ox: 0, oy: 0 } satisfies Framing),
-      setFmt: (fmt) => set({ fmt, sel: 0, mode: "slide", activeSlot: null, textSel: null }),
+      setFmt: (fmt) => set({ fmt, sel: 0, mode: "slide", activeSlot: null, textSel: null, layerSel: null }),
       setSize: (size) => set({ size }),
       resetStyle: (key) => {
         const meme = get().posts.meme;
@@ -548,49 +570,59 @@ export const useEditor = create<EditorState>()(
         const [from, to] = mode === "caption" ? [DEFAULT_STYLES.meme, caption] : [caption, DEFAULT_STYLES.meme];
         get().update(["posts", "meme"], { mode, style: sameStyle(cur, from) ? to : cur });
       },
-      setMemeBar: (bar) => {
-        const st = get().posts.meme.style;
+      setMemeBar: (barColor) => {
+        const { style: st } = get().posts.meme;
+        const bar = shadeOf(barColor);
         const other = bar === "dark" ? "light" : "dark";
-        get().update(["posts", "meme"], { bar, style: st.color === CAPTION_TEXT[other] ? { ...st, color: CAPTION_TEXT[bar] } : st });
+        get().update(["posts", "meme"], { bar, barColor, style: st.color === CAPTION_TEXT[other] ? { ...st, color: CAPTION_TEXT[bar] } : st });
       },
       setTweetTheme: (theme) => {
         const p = get().posts.tweet;
-        const [from, to] = theme === "light" ? [TWEET_DARK, TWEET_LIGHT] : [TWEET_LIGHT, TWEET_DARK];
+        const [from, to] = [TWEET_THEMES[p.theme], TWEET_THEMES[theme]];
         get().update(["posts", "tweet"], {
           theme,
           background: p.background === from.background ? to.background : p.background,
           style: p.style.color === from.color ? { ...p.style, color: to.color } : p.style,
         });
       },
-      select: (sel) => set({ sel, mode: "slide", textSel: null }),
+      select: (sel) => set({ sel, mode: "slide", textSel: null, layerSel: null }),
       setMode: (mode) => set({ mode }),
       setActiveSlot: (activeSlot) => set({ activeSlot }),
-      setLayerSel: (layerSel) => set({ layerSel, mode: "slide" }),
+      // Picking a layer shows its settings; clearing the selection leaves the panel as it is.
+      setLayerSel: (layerSel) => set(layerSel ? { layerSel, mode: "slide" } : { layerSel }),
       setTextSel: (textSel) => set({ textSel }),
-      addLayer: (kind) => {
-        const layer = kind === "text" ? textLayer() : imageLayer("new photo", { w: 0.5 });
-        get().update(["posts", "custom"], { layers: [...get().posts.custom.layers, layer] });
-        set({ layerSel: layer.id, mode: "slide" });
+      addLayer: (kind, emoji = "😂") => {
+        const { path, layers } = slideLayers(get());
+        const layer =
+          kind === "text"
+            ? textLayer()
+            : kind === "sticker"
+              ? textLayer({ text: emoji, font: "Archivo", size: 170, caps: false, effect: "none", width: 0.3 })
+              : imageLayer("new photo", { w: 0.5 });
+        setLayers(path, [...layers, layer]);
+        set({ layerSel: layer.id, textSel: null, mode: "slide" });
       },
       duplicateLayer: (id) => {
-        const layers = get().posts.custom.layers;
+        const { path, layers } = slideLayers(get());
         const i = layers.findIndex((l) => l.id === id);
         if (i < 0) return;
         const copy = { ...layers[i], id: nextId(), x: Math.min(0.95, layers[i].x + 0.04), y: Math.min(0.95, layers[i].y + 0.04) } as Layer;
-        get().update(["posts", "custom"], { layers: [...layers.slice(0, i + 1), copy, ...layers.slice(i + 1)] });
+        setLayers(path, [...layers.slice(0, i + 1), copy, ...layers.slice(i + 1)]);
         set({ layerSel: copy.id });
       },
       removeLayer: (id) => {
-        get().update(["posts", "custom"], { layers: get().posts.custom.layers.filter((l) => l.id !== id) });
+        const { path, layers } = slideLayers(get());
+        setLayers(path, layers.filter((l) => l.id !== id));
         set({ layerSel: null, activeSlot: null });
       },
       restackLayer: (id, dir) => {
-        const layers = [...get().posts.custom.layers];
+        const { path, layers: cur } = slideLayers(get());
+        const layers = [...cur];
         const i = layers.findIndex((l) => l.id === id);
         const j = i + dir;
         if (i < 0 || j < 0 || j >= layers.length) return;
         [layers[i], layers[j]] = [layers[j], layers[i]];
-        get().update(["posts", "custom"], { layers });
+        setLayers(path, layers);
       },
       applyPreset: (presetId) => {
         const preset = CANVAS_PRESETS.find((p) => p.id === presetId);
@@ -662,6 +694,24 @@ export const useEditor = create<EditorState>()(
 );
 
 /* ---------- hooks and shared actions ---------- */
+
+/** The current slide's own layers (blank canvas, or added on top of a template) and the path to their array. */
+export function slideLayers(s: Pick<EditorState, "fmt" | "posts" | "sel">): { path: SlotPath; layers: Layer[] } {
+  const slides = slidesFor(s.fmt, s.posts);
+  const path = layersPath(slides[Math.min(s.sel, slides.length - 1)]);
+  return { path, layers: getIn<Layer[] | undefined>(s, path) ?? [] };
+}
+
+/** Replace the layer array at `path` (created on first use for a template slide). */
+const setLayers = (path: SlotPath, layers: Layer[]) => useEditor.getState().update(path.slice(0, -1), { [path[path.length - 1]]: layers });
+
+/** The current slide's layers, for components. */
+export function useSlideLayers() {
+  const fmt = useEditor((s) => s.fmt);
+  const posts = useEditor((s) => s.posts);
+  const sel = useEditor((s) => s.sel);
+  return useMemo(() => slideLayers({ fmt, posts, sel }), [fmt, posts, sel]);
+}
 
 /** Slides of the current format, with the selection clamped to them. */
 export function useSlides() {

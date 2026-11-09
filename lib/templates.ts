@@ -18,9 +18,15 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = [
   {
     name: "Memes & social",
     templates: [
-      { id: "meme", name: "Meme", blurb: "Classic top and bottom text, or a caption bar above the photo.", howto: "Add your photo, then type the top and bottom text. Switch Meme style for a caption above the photo." },
-      { id: "tweet", name: "Tweet / X post", blurb: "A post card on a plain background, screenshot style.", howto: "Type the post text and who posted it. The photo is optional; leave it empty for a text-only post." },
+      { id: "meme", name: "Meme", blurb: "Classic top and bottom text, or a caption bar above the photo.", howto: "Add your photo, then type the top and bottom text. Switch Meme style for a caption above or below the photo." },
+      { id: "tweet", name: "Tweet / X post", blurb: "A post card on a plain background, screenshot style.", howto: "Type the post text and who posted it. The photo and the counts are optional; leave them empty to hide them." },
       { id: "quote", name: "Quote", blurb: "A big quote with who said it, on a photo or a color.", howto: "Type the quote and who said it, then pick a photo or a plain color behind it." },
+      {
+        id: "scene",
+        name: "Movie scene",
+        blurb: "A movie still with letterbox bars and yellow or white subtitles, plus a caption above.",
+        howto: "Add a still from the movie, type the subtitle line, and an optional caption above it.",
+      },
       { id: "compare", name: "Comparison", blurb: "Two photos side by side: this vs that, before and after.", howto: "Add a photo and a label for each side." },
     ],
   },
@@ -36,7 +42,7 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = [
   {
     name: "News",
     templates: [
-      { id: "headline", name: "Headline", blurb: "One photo with a bold headline, plus an optional clean photo.", howto: "Add a photo and type the headline. Wrap words in *stars* to color them." },
+      { id: "headline", name: "Headline", blurb: "One photo with a bold headline, plus an optional clean photo.", howto: "Add a photo and type the headline. Add a tag like BREAKING or a source line if you want. Wrap words in *stars* to color them." },
       { id: "news", name: "News story", blurb: "A cover with a full-width headline, then story slides.", howto: "Write the cover headline, then tap the slides under the post to write each story slide." },
     ],
   },

@@ -3,7 +3,7 @@ import { useEditor, useField } from "@/lib/store";
 import ImageSlot from "@/components/fields/ImageSlot";
 import TextField from "@/components/fields/TextField";
 import Toggle from "@/components/fields/Toggle";
-import { Group, HIGHLIGHT_TIP, OrderButtons } from "./ui";
+import { Group, HIGHLIGHT_TIP, OrderButtons, Row } from "./ui";
 
 const P = ["posts", "news"] as const;
 
@@ -14,6 +14,8 @@ export default function NewsPanel({ slide }: { slide: Slide }) {
 function Cover() {
   const [insetOn, setInsetOn] = useField<boolean>(P, "insetOn");
   const [text, setText] = useField<string>(P, "text");
+  const [tag, setTag] = useField<string | undefined>(P, "tag");
+  const [source, setSource] = useField<string | undefined>(P, "source");
   const [swipe, setSwipe] = useField<boolean>(P, "swipe");
   const [follow, setFollow] = useField<boolean>(P, "follow");
   return (
@@ -28,6 +30,10 @@ function Cover() {
         onChange={setText}
         tip="Each line stretches to the full width. Press Enter where a new line should start."
       />
+      <Row>
+        <TextField label="Tag above" value={tag ?? ""} onChange={setTag} tip="e.g. BREAKING or EXCLUSIVE. Empty hides it." />
+        <TextField label="Source line" value={source ?? ""} onChange={setSource} tip="e.g. Source: Variety. Empty hides it." />
+      </Row>
       <Group title="Post">
         <Toggle label={'"Swipe" tag'} checked={swipe} onChange={setSwipe} />
         <Toggle label="End with your follow card" checked={follow} onChange={setFollow} />

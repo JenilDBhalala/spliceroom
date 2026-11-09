@@ -1,6 +1,6 @@
-import type { Brand, Frame, ImageLayer, Region, RenderState, TextLayer } from "@/types/post";
+import type { Brand, Frame, ImageLayer, Layer, Region, RenderState, SlotPath, TextLayer } from "@/types/post";
 import { fontDef } from "./fonts";
-import { type Ctx, applyFx, blockH, drawCover, fontFace, imageOf, rrect, setShadow, shadowOff, toks, wrap } from "./helpers";
+import { type Ctx, applyFx, hexAlpha, blockH, drawCover, fontFace, imageOf, rrect, setShadow, shadowOff, toks, wrap } from "./helpers";
 
 type Box = { x: number; y: number; w: number; h: number };
 
@@ -30,11 +30,24 @@ export function custom(ctx: Ctx, { brand, posts, frame }: RenderState): Region[]
     ctx.fillRect(0, 0, W, H);
   }
 
-  p.layers.forEach((l, i) => {
+  return [...regs, ...drawLayers(ctx, p.layers, brand, frame, ["posts", "custom", "layers"])];
+}
+
+/** Free text and photo layers, each with its own opacity and rotation; `path` is the array holding them. */
+export function drawLayers(ctx: Ctx, layers: Layer[], brand: Brand, frame: Frame, path: SlotPath): Region[] {
+  return layers.map((l, i) => {
+    ctx.save();
+    if (l.rotate) {
+      const [cx, cy] = [l.x * frame.W, l.y * frame.H];
+      ctx.translate(cx, cy);
+      ctx.rotate((l.rotate * Math.PI) / 180);
+      ctx.translate(-cx, -cy);
+    }
+    if (l.opacity !== undefined && l.opacity < 1) ctx.globalAlpha = l.opacity;
     const box = l.kind === "text" ? drawText(ctx, l, brand, frame) : drawImage(ctx, l, frame);
-    regs.push({ ...box, path: ["posts", "custom", "layers", i], layer: { id: l.id, resize: l.kind === "text" ? "size" : "w" } });
+    ctx.restore();
+    return { ...box, path: [...path, i], layer: { id: l.id, resize: l.kind === "text" ? "size" : "w" }, rotate: l.rotate };
   });
-  return regs;
 }
 
 function drawText(ctx: Ctx, l: TextLayer, brand: Brand, { W, H }: Frame): Box {
@@ -65,24 +78,31 @@ function drawText(ctx: Ctx, l: TextLayer, brand: Brand, { W, H }: Frame): Box {
     ctx.fill();
   }
   if (l.effect === "shadow") setShadow(ctx, hexAlpha(l.effectColor, 0.75), size * 0.22, size * 0.05);
+  // Neon-style glow: a wide soft shadow in the glow color, no offset.
+  if (l.effect === "glow") setShadow(ctx, l.effectColor, size * 0.45, 0);
   if (l.effect === "outline") {
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
     ctx.strokeStyle = l.effectColor;
-    ctx.lineWidth = Math.max(3, size * 0.13);
+    ctx.lineWidth = Math.max(2, size * (l.stroke ?? 0.13));
   }
   const accent = l.accent ?? brand.accent;
   ctx.textAlign = "left";
-  res.lines.forEach((L, i) => {
-    let x = l.align === "left" ? left : l.align === "right" ? left + contentW - L.w : left + (contentW - L.w) / 2;
-    const y = top + size * 0.74 + i * size * lh;
-    L.words.forEach((wd, k) => {
-      if (k && !wd.join) x += res.sp;
-      if (l.effect === "outline") ctx.strokeText(wd.t, x, y);
-      ctx.fillStyle = wd.em ? accent : l.color;
-      ctx.fillText(wd.t, x, y);
-      x += wd.w;
+  // Outlines first, then all the letters, so a thick outline never covers the word before it.
+  const pass = (draw: (t: string, x: number, y: number, em: boolean) => void) =>
+    res.lines.forEach((L, i) => {
+      let x = l.align === "left" ? left : l.align === "right" ? left + contentW - L.w : left + (contentW - L.w) / 2;
+      const y = top + size * 0.74 + i * size * lh;
+      L.words.forEach((wd, k) => {
+        if (k && !wd.join) x += res.sp;
+        draw(wd.t, x, y, !!wd.em);
+        x += wd.w;
+      });
     });
+  if (l.effect === "outline") pass((t, x, y) => ctx.strokeText(t, x, y));
+  pass((t, x, y, em) => {
+    ctx.fillStyle = em ? accent : l.color;
+    ctx.fillText(t, x, y);
   });
   shadowOff(ctx);
   ctx.restore();
@@ -125,10 +145,4 @@ function drawImage(ctx: Ctx, l: ImageLayer, { W, H }: Frame): Box {
     ctx.stroke();
   }
   return { x, y, w, h };
-}
-
-/** #rrggbb plus an alpha, for soft shadows in the chosen color. */
-function hexAlpha(hex: string, a: number) {
-  const n = parseInt(hex.slice(1), 16);
-  return Number.isNaN(n) ? `rgba(0,0,0,${a})` : `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }

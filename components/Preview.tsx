@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Framing, ImageSlot, Region, TextMove, TextMoves } from "@/types/post";
 import { renderSlide } from "@/lib/render";
 import { imageOf, overflow } from "@/lib/render/helpers";
-import { getIn, loadFileInto, useEditor, useRenderState, useSlides } from "@/lib/store";
+import { getIn, loadFileInto, slideLayers, useEditor, useRenderState, useSlides } from "@/lib/store";
 import { useRedrawTick } from "@/lib/useRedrawTick";
 
 type Pt = { x: number; y: number };
@@ -38,9 +38,9 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
   } | null>(null);
   const [grab, setGrab] = useState(false);
   const [dragging, setDragging] = useState(false);
-  // Outline of the selected blank-canvas layer or template text block, in layout units.
+  // Outline of the selected layer or template text block, in layout units.
   const [selBox, setSelBox] = useState<Region | null>(null);
-  const layerSel = useEditor((s) => (s.fmt === "custom" ? s.layerSel : null));
+  const layerSel = useEditor((s) => s.layerSel);
   const textSel = useEditor((s) => s.textSel?.key ?? null);
   // Guide lines while a text block sits snapped on its original column (v) or row (h).
   const [guides, setGuides] = useState<{ v: boolean; h: boolean }>({ v: false, h: false });
@@ -141,22 +141,23 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Canvas layers: arrow keys nudge (Shift for bigger steps), Delete removes, Escape deselects.
+  // Layers: arrow keys nudge (Shift for bigger steps), Delete removes, Escape deselects.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.closest("input, textarea, select, [contenteditable], dialog")) return;
       const st = useEditor.getState();
-      if (st.fmt !== "custom" || !st.layerSel) return;
-      const i = st.posts.custom.layers.findIndex((l) => l.id === st.layerSel);
+      if (!st.layerSel) return;
+      const { path, layers } = slideLayers(st);
+      const i = layers.findIndex((l) => l.id === st.layerSel);
       if (i < 0) return;
-      const l = st.posts.custom.layers[i];
+      const l = layers[i];
       const step = e.shiftKey ? 0.02 : 0.005;
       const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
       if (moves[e.key]) {
         e.preventDefault();
         const [dx, dy] = moves[e.key];
-        st.update(["posts", "custom", "layers", i], { x: Math.max(0, Math.min(1, l.x + dx)), y: Math.max(0, Math.min(1, l.y + dy)) });
+        st.update([...path, i], { x: Math.max(0, Math.min(1, l.x + dx)), y: Math.max(0, Math.min(1, l.y + dy)) });
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         st.removeLayer(l.id);
@@ -213,7 +214,7 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
             const pt = toCanvas(e, rect);
             const reg = hit(pt);
             const st = useEditor.getState();
-            if (st.fmt === "custom") st.setLayerSel(reg?.layer?.id ?? null);
+            st.setLayerSel(reg?.layer?.id ?? null);
             st.setTextSel(reg?.text ? { ...reg.text } : null);
             // A template photo: its box in the panel lights up (and pastes go there).
             if (reg && !reg.text && !reg.layer) st.setActiveSlot(reg.imgPath ?? reg.path);
@@ -303,6 +304,7 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
             top: `${(selBox.y / H) * 100}%`,
             width: `${(selBox.w / W) * 100}%`,
             height: `${(selBox.h / H) * 100}%`,
+            transform: selBox.rotate ? `rotate(${selBox.rotate}deg)` : undefined,
           }}
         />
       )}

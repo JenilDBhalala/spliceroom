@@ -19,7 +19,7 @@ export default function BrandPanel({ onDone }: { onDone?: () => void }) {
   const update = useEditor((s) => s.update);
   const setMode = useEditor((s) => s.setMode);
   const set = (patch: Partial<Brand>) => update(["brand"], patch);
-  const text = (label: string, key: "name" | "display" | "posts" | "followers" | "following" | "bio" | "link" | "cta", extra = {}) => (
+  const text = (label: string, key: "name" | "display" | "posts" | "followers" | "following" | "bio" | "link", extra = {}) => (
     <TextField label={label} value={brand[key]} onChange={(v) => set({ [key]: v })} {...extra} />
   );
   return (
@@ -46,7 +46,6 @@ export default function BrandPanel({ onDone }: { onDone?: () => void }) {
         </Row>
         {text("Bio", "bio", { area: true, tip: "One line per row, up to 5. @handles show in purple." })}
         {text("Link", "link")}
-        {text("Follow headline", "cta", { area: true })}
       </Group>
       <Group title="Download">
         <SelectField

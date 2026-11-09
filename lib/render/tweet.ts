@@ -14,8 +14,20 @@ const SHAPE_RATIO = { wide: 9 / 16, square: 1, tall: 5 / 4 } as const;
 
 const THEME = {
   dark: { card: "#000", border: "#2f3336", name: "#e7e9ea", muted: "#71767b" },
+  dim: { card: "#15202b", border: "#38444d", name: "#f7f9f9", muted: "#8b98a5" },
   light: { card: "#fff", border: "#e1e8ed", name: "#0f1419", muted: "#536471" },
 };
+
+const BADGE = { blue: "#1d9bf0", gold: "#e2b719", grey: "#829aab" } as const;
+
+/** "12400" → "12.4K", "1500000" → "1.5M", like the counts under a post; anything else stays as typed. */
+export function shortCount(v: string) {
+  const n = Number(v.replace(/[,\s]/g, ""));
+  if (!v.trim() || !Number.isFinite(n) || n < 1000) return v.trim();
+  const [d, u] = n >= 1e9 ? [1e9, "B"] : n >= 1e6 ? [1e6, "M"] : [1e3, "K"];
+  const x = n / d;
+  return `${x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10}${u}`;
+}
 
 /** A post card in the style of an X/Twitter screenshot, centered on a plain background. */
 export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] {
@@ -36,8 +48,14 @@ export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
   const innerW = cardW - pad * 2;
   const headerH = 120;
   const date = p.autoDate ? nowStamp() : p.date.trim();
-  const dateH = date ? 30 + 34 : 0;
-  const avail = H - margin * 2 - pad * 2 - headerH - 36 - dateH;
+  const views = shortCount(p.views ?? "");
+  const dateH = date || views ? 30 + 34 : 0;
+  const stats = ([[p.reposts, "Reposts"], [p.likes, "Likes"], [p.bookmarks, "Bookmarks"]] as const)
+    .map(([v, label]) => [shortCount(v ?? ""), label] as const)
+    .filter(([v]) => v);
+  // A divider, then the counts row.
+  const statsH = stats.length ? 30 + 2 + 30 + 34 : 0;
+  const avail = H - margin * 2 - pad * 2 - headerH - 36 - dateH - statsH;
   let imgH = 0;
   if (p.showImage) {
     const shape = p.imgShape ?? "auto";
@@ -52,7 +70,7 @@ export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
   const fit = fitStyled(ctx, p.text, p.style, innerW, avail - (imgH ? imgH + 30 : 0), lh, 60, 28);
   ctx.restore();
   const textH = p.text.trim() ? blockH(fit.lines.length, fit.size, lh) : 0;
-  const cardH = pad * 2 + headerH + 36 + textH + (imgH ? 30 + imgH : 0) + dateH;
+  const cardH = pad * 2 + headerH + 36 + textH + (imgH ? 30 + imgH : 0) + dateH + statsH;
   const x0 = margin;
   const y0 = Math.max(margin, (H - cardH) / 2);
 
@@ -69,7 +87,7 @@ export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
     // header: avatar, name + badge, handle
     const ax = x0 + pad + 60;
     const ay = y0 + pad + 60;
-    drawAvatar(ctx, avatar, ax, ay, 60, p.theme === "dark" ? "#16181c" : "#eff3f4");
+    drawAvatar(ctx, avatar, ax, ay, 60, p.theme === "light" ? "#eff3f4" : "#16181c");
     if (!uploaded(avatar)) {
       ctx.font = archivo(700, 52);
       ctx.textAlign = "center";
@@ -81,7 +99,7 @@ export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
     ctx.font = archivo(700, 40);
     ctx.fillStyle = t.name;
     ctx.fillText(name, tx, y0 + pad + 50);
-    if (verified) verifiedBadge(ctx, tx + ctx.measureText(name).width + 9 + 25 * 0.66, y0 + pad + 36, 0.66);
+    if (verified) verifiedBadge(ctx, tx + ctx.measureText(name).width + 9 + 25 * 0.66, y0 + pad + 36, 0.66, BADGE[p.badge ?? "blue"]);
     ctx.font = archivo(400, 34);
     ctx.fillStyle = t.muted;
     ctx.fillText(handle, tx, y0 + pad + 100);
@@ -105,11 +123,35 @@ export function tweet(ctx: Ctx, { brand, posts, frame }: RenderState): Region[] 
       y += imgH;
     }
     if (dateH) {
-      ctx.font = archivo(400, 30);
-      ctx.textAlign = "left";
-      ctx.fillStyle = t.muted;
-      ctx.fillText(date, x0 + pad, y + 30 + 26);
+      // "9:41 AM · Oct 31, 2026 · 1.2M Views", the number in bold like on X.
+      y += 30;
+      runs(ctx, x0 + pad, y + 26, [
+        [date, t.muted, 400],
+        [date && views ? " · " : "", t.muted, 400],
+        [views, t.name, 700],
+        [views ? " Views" : "", t.muted, 400],
+      ]);
+      y += 34;
+    }
+    if (statsH) {
+      y += 30;
+      ctx.fillStyle = t.border;
+      ctx.fillRect(x0 + pad, y, innerW, 2);
+      y += 2 + 30;
+      runs(ctx, x0 + pad, y + 26, stats.flatMap(([v, label], i) => [[v, t.name, 700], [` ${label}${i < stats.length - 1 ? "    " : ""}`, t.muted, 400]] as const));
     }
   });
   return photo.map((b) => ({ ...place(b), path: ["posts", "tweet", "img"] }));
+}
+
+/** Pieces of 30px text in a row, each with its own color and weight. */
+function runs(ctx: Ctx, x: number, y: number, parts: readonly (readonly [string, string, number])[]) {
+  ctx.textAlign = "left";
+  for (const [text, color, weight] of parts) {
+    if (!text) continue;
+    ctx.font = archivo(weight, 30);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    x += ctx.measureText(text).width;
+  }
 }

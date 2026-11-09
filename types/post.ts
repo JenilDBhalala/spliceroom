@@ -10,7 +10,8 @@ export type FormatId =
   | "tweet"
   | "quote"
   | "compare"
-  | "follow";
+  | "follow"
+  | "scene";
 
 /** Output shape: portrait feed post, square post, or story / reel cover. */
 export type PostSize = "portrait" | "square" | "story";
@@ -94,7 +95,15 @@ export interface TextStyle {
   tracking: number;
   /** Line spacing multiplier (1 = the template's normal spacing). */
   leading: number;
+  /** Text effect; unset = the template's own (memes: a black outline). */
+  effect?: TextEffect;
+  /** Outline, shadow, glow or box color. */
+  effectColor?: string;
+  /** Outline thickness as a fraction of the font size. */
+  stroke?: number;
 }
+
+export type TextEffect = "none" | "outline" | "shadow" | "glow" | "box";
 
 export interface Brand {
   name: string;
@@ -118,6 +127,8 @@ export interface Brand {
 export interface HeadlinePost {
   /** Show @pagename in a corner. */
   watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -127,6 +138,10 @@ export interface HeadlinePost {
   /** Framing of the same photo on the clean slide. */
   cleanAdj: Framing;
   text: string;
+  /** Small label above the headline, e.g. BREAKING; empty = hidden. */
+  tag?: string;
+  /** Credit line under the headline, e.g. "Source: Variety"; empty = hidden. */
+  source?: string;
   logo: boolean;
   swipe: boolean;
   clean: boolean;
@@ -141,11 +156,15 @@ export interface ListItem {
   color: string;
   rating: string;
   showRating: boolean;
+  /** Small line under the title, e.g. "2024 · Drama"; empty = hidden. */
+  meta?: string;
 }
 
 export interface ListPost {
   /** Show @pagename in a corner. */
   watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -153,6 +172,8 @@ export interface ListPost {
   style: TextStyle;
   panels: ImageSlot[];
   panelCount: 2 | 3 | 4;
+  /** How every movie's rating shows; unset = IMDb. */
+  ratingKind?: "imdb" | "tomato" | "stars" | "text";
   text: string;
   swipe: boolean;
   follow: boolean;
@@ -168,6 +189,8 @@ export interface Story {
 export interface NewsPost {
   /** Show @pagename in a corner. */
   watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -177,6 +200,10 @@ export interface NewsPost {
   inset: ImageSlot;
   insetOn: boolean;
   text: string;
+  /** Small label above the headline, e.g. BREAKING; empty = hidden. */
+  tag?: string;
+  /** Credit line under the headline, e.g. "Source: Variety"; empty = hidden. */
+  source?: string;
   swipe: boolean;
   follow: boolean;
   stories: Story[];
@@ -192,6 +219,8 @@ export interface Lesson {
 export interface LessonsPost {
   /** Show @pagename in a corner. */
   watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -221,6 +250,8 @@ export interface TimelineRow {
 export interface TimelinePost {
   /** Show @pagename in a corner. */
   watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -232,6 +263,8 @@ export interface TimelinePost {
 export interface PosterPost {
   /** Show @pagename in a corner. */
   watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -248,6 +281,8 @@ export interface PosterPost {
 }
 
 export interface MemePost {
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -255,8 +290,14 @@ export interface MemePost {
   style: TextStyle;
   /** classic: text on the photo; caption: white bar above the photo. */
   mode: "classic" | "caption";
-  /** Caption bar color in caption mode. */
+  /** Caption bar shade in caption mode (kept for drafts from before `barColor`). */
   bar: "light" | "dark";
+  /** Caption bar color; unset = white or black from `bar`. */
+  barColor?: string;
+  /** Caption above or below the photo; unset = above. */
+  captionAt?: "top" | "bottom";
+  /** Space around the photo in the bar color, in caption mode. */
+  pad?: "none" | "small" | "large";
   img: ImageSlot;
   top: string;
   bottom: string;
@@ -267,13 +308,22 @@ export interface MemePost {
 export interface TweetPost {
   /** Show @pagename in a corner. */
   watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
   looks?: TextLooks;
   style: TextStyle;
-  theme: "dark" | "light";
+  theme: "dark" | "light" | "dim";
   background: string;
+  /** Tick color; unset = blue. */
+  badge?: "blue" | "gold" | "grey";
+  /** Counts under the post, as typed ("12400" shows as 12.4K); empty ones are hidden. */
+  views?: string;
+  reposts?: string;
+  likes?: string;
+  bookmarks?: string;
   /** Use the brand's display name, handle, avatar and tick. */
   useBrand: boolean;
   name: string;
@@ -291,6 +341,8 @@ export interface TweetPost {
 }
 
 export interface QuotePost {
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -299,15 +351,45 @@ export interface QuotePost {
   img: ImageSlot;
   usePhoto: boolean;
   background: string;
+  /** How dark the photo is made behind the quote, 0–0.85; unset = 0.55. */
+  darken?: number;
+  /** Big quote mark above the text; unset = shown. */
+  mark?: boolean;
+  /** Text alignment; unset = centered. */
+  align?: "center" | "left";
   quote: string;
   author: string;
   source: string;
   watermark: boolean;
 }
 
+/** A movie still with letterbox bars and subtitles, and an optional caption above. */
+export interface ScenePost {
+  /** Show @pagename in a corner. */
+  watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
+  /** Text blocks the user dragged or resized on the preview. */
+  moves?: TextMoves;
+  /** Text blocks the user restyled one by one. */
+  looks?: TextLooks;
+  /** The caption's style. */
+  style: TextStyle;
+  img: ImageSlot;
+  /** Black bars above and below the still: none (full slide), 1.85:1 or 2.39:1. */
+  bars: "none" | "thin" | "wide";
+  subtitle: string;
+  subColor: "yellow" | "white";
+  italic: boolean;
+  /** Text above the still, e.g. "POV: ..."; empty = hidden. */
+  caption: string;
+}
+
 export interface ComparePost {
   /** Show @pagename in a corner. */
   watermark?: boolean;
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -322,12 +404,16 @@ export interface ComparePost {
   vs: boolean;
 }
 
-/** A free-form text block on the blank canvas. Position is its center, as a fraction of the slide. */
+/** A free-form text block on the blank canvas or on top of a template. Position is its center, as a fraction of the slide. */
 export interface TextLayer {
   kind: "text";
   id: string;
   x: number;
   y: number;
+  /** 0–1; unset = fully visible. */
+  opacity?: number;
+  /** Degrees, clockwise. */
+  rotate?: number;
   text: string;
   font: FontKey;
   /** Font size in layout units (the slide is 1080 wide). */
@@ -345,17 +431,23 @@ export interface TextLayer {
   caps: boolean;
   /** Wrapping width as a fraction of the slide width. */
   width: number;
-  effect: "none" | "outline" | "shadow" | "box";
-  /** Outline, shadow or box color. */
+  effect: TextEffect;
+  /** Outline, shadow, box or glow color. */
   effectColor: string;
+  /** Outline thickness as a fraction of the font size; unset = 0.13. */
+  stroke?: number;
 }
 
-/** A photo placed on the blank canvas. */
+/** A photo placed on the blank canvas or on top of a template. */
 export interface ImageLayer {
   kind: "image";
   id: string;
   x: number;
   y: number;
+  /** 0–1; unset = fully visible. */
+  opacity?: number;
+  /** Degrees, clockwise. */
+  rotate?: number;
   img: ImageSlot;
   /** Width as a fraction of the slide width. */
   w: number;
@@ -366,6 +458,8 @@ export interface ImageLayer {
 }
 
 export type Layer = TextLayer | ImageLayer;
+/** Layers added on top of a template, keyed by slide. */
+export type Extras = Record<string, Layer[]>;
 
 export interface CustomPost {
   /** Show @pagename in a corner. */
@@ -380,6 +474,8 @@ export interface CustomPost {
 }
 
 export interface FollowPost {
+  /** Text, photos and stickers added on top, per slide (see `Slide.own`). */
+  extras?: Extras;
   /** Text blocks the user dragged or resized on the preview. */
   moves?: TextMoves;
   /** Text blocks the user restyled one by one. */
@@ -399,6 +495,7 @@ export interface Posts {
   tweet: TweetPost;
   quote: QuotePost;
   compare: ComparePost;
+  scene: ScenePost;
   follow: FollowPost;
 }
 
@@ -421,13 +518,16 @@ export type SlideKind =
   | "tweet"
   | "quote"
   | "compare"
-  | "follow";
+  | "follow"
+  | "scene";
 
 export interface Slide {
   kind: SlideKind;
   label: string;
   /** Index into list items / news stories / lessons. */
   i?: number;
+  /** Where this slide's own layers live: `posts[post].extras[key]` (the blank canvas keeps them in `layers`). */
+  own: { post: keyof Posts; key: string };
 }
 
 /** Path into editor state, e.g. ["posts", "list", "items", 0, "img"]. */
@@ -445,6 +545,8 @@ export interface Region {
   imgPath?: SlotPath;
   /** A canvas layer: dragging moves it (x/y at `path`), zooming resizes this field. */
   layer?: { id: string; resize: "size" | "w" };
+  /** Degrees the layer or text block is turned, so its selection box turns with it. */
+  rotate?: number;
   /** A template's text block: dragging and zooming change `moves[key]` (the object at `path`). */
   text?: TextBlock;
 }
@@ -457,13 +559,13 @@ export interface Region {
 export interface TextBlock {
   key: string;
   look: "style" | "color" | "none";
-  base: { color: string; font?: FontKey; accent?: string | null; caps?: boolean };
+  base: { color: string; font?: FontKey; accent?: string | null; caps?: boolean; effect?: TextEffect; effectColor?: string; stroke?: number };
   /** Center of the block where the template puts it, as fractions of the slide (for centering). */
   home: { cx: number; cy: number };
 }
 
 /** One text block's own look, over the template's. */
-export type TextLook = Partial<Pick<TextStyle, "font" | "color" | "accent" | "caps">> & { opacity?: number };
+export type TextLook = Partial<Pick<TextStyle, "font" | "color" | "accent" | "caps" | "effect" | "effectColor" | "stroke">> & { opacity?: number };
 export type TextLooks = Record<string, TextLook>;
 
 /** How far a template's text block was dragged (fractions of the slide) and how much it was resized. */
