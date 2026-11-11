@@ -25,6 +25,10 @@ export default function PrivacyPage() {
           <strong>Your photos and text never leave your device.</strong> Images are made in your browser. We don&rsquo;t upload, store or see
           anything you put into a post.
         </li>
+        <li>
+          If you use the <strong>news tools</strong>, our server opens the news articles you pick, and their text is sent to Google&rsquo;s
+          Gemini API to write the headlines and slides. Nothing else from your device is sent.
+        </li>
         <li>There are no accounts, and we don&rsquo;t ask for your name or email.</li>
         <li>
           We use <strong>Google Analytics</strong> to count visits and see which templates are used. In the EU, UK and Switzerland it only runs
@@ -79,6 +83,15 @@ export default function PrivacyPage() {
         {SITE_NAME} is hosted by Vercel Inc. Like any web host, Vercel&rsquo;s servers receive your IP address and browser details when your
         browser loads the site, and keep short-lived logs of these requests to deliver the site and protect it from abuse. Fonts and icons are
         served from our own site, so loading {SITE_NAME} doesn&rsquo;t contact font services.
+      </p>
+      <p>
+        When you use the news tools (&ldquo;Make it from a news link&rdquo; or &ldquo;Find cinema news&rdquo;), our server reads public film
+        news feeds, downloads the articles you pick and their images, and sends any search words you type to our own server only. The
+        articles&rsquo; text is sent to the Gemini API (Google LLC) to write headlines and short slides; Google processes it under its Gemini
+        API terms. If you add your own Gemini API key, it is saved only in your browser and sent to our server with your news requests,
+        which use it for that request only and never store or log it; Google then processes the articles under your own agreement with
+        Google. We don&rsquo;t store your searches, the links, the articles or the results. To limit misuse, we count how
+        many stories each IP address turns into posts per day, in memory only.
       </p>
 
       <h2>4. Legal bases (GDPR and UK GDPR)</h2>

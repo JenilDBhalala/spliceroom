@@ -1,11 +1,14 @@
 import { useState, type ReactNode } from "react";
 import type { Brand } from "@/types/post";
+import { track } from "@/lib/analytics";
 import { useConsentAnswered } from "@/lib/useConsentAnswered";
 import { isFirstVisit, useEditor, useSlides } from "@/lib/store";
 import { SIZE_OPTIONS, templateInfo } from "@/lib/templates";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import Segmented from "@/components/fields/Segmented";
 import LogoMark from "@/components/LogoMark";
+import { SparkIcon } from "@/components/NewsButton";
+import NewsFinder from "@/components/NewsFinder";
 import BrandPanel from "@/components/panels/BrandPanel";
 import StyleSection from "@/components/panels/StyleSection";
 import { Note } from "@/components/panels/ui";
@@ -31,6 +34,7 @@ export default function MobileShell() {
   // First visit: start by asking what to make, then point at the Edit tab once.
   const [picking, setPicking] = useState(isFirstVisit);
   const [coach, setCoach] = useState(isFirstVisit);
+  const [finding, setFinding] = useState(false);
   const fmt = useEditor((s) => s.fmt);
   const mode = useEditor((s) => s.mode);
   const setMode = useEditor((s) => s.setMode);
@@ -113,7 +117,7 @@ export default function MobileShell() {
               Got it
             </button>
             {/* Points at the Edit tab. */}
-            <i aria-hidden className="absolute -bottom-1.5 size-3 rotate-45 bg-fg" style={{ left: `calc(100vw / ${tabs.filter((t) => !t.hidden).length * 2} - 18px)` }} />
+            <i aria-hidden className="absolute -bottom-1.5 size-3 rotate-45 bg-fg" style={{ left: `calc(100vw / ${(tabs.filter((t) => !t.hidden).length + 1) * 2} - 18px)` }} />
           </div>
         </div>
       )}
@@ -127,10 +131,12 @@ export default function MobileShell() {
         </BottomSheet>
       )}
 
+      <NewsFinder open={finding} onClose={() => setFinding(false)} />
+
       <nav
         aria-label="Editor sections"
         className="grid flex-none border-t border-line bg-bg pb-[env(safe-area-inset-bottom,0px)]"
-        style={{ gridTemplateColumns: `repeat(${tabs.filter((t) => !t.hidden).length}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${tabs.filter((t) => !t.hidden).length + 1}, minmax(0, 1fr))` }}
       >
         {tabs
           .filter((t) => !t.hidden)
@@ -146,6 +152,22 @@ export default function MobileShell() {
               {t.label}
             </button>
           ))}
+        {/* Not a sheet: the AI news maker opens its own full-screen finder. */}
+        <button
+          type="button"
+          aria-label="Make a cinema news post with AI"
+          onClick={() => {
+            buzz();
+            setCoach(false);
+            setTab(null);
+            setFinding(true);
+            track("news_open", { from: "tab_bar" });
+          }}
+          className="flex min-h-14 cursor-pointer flex-col items-center justify-center gap-1 text-[11px] font-semibold text-accent"
+        >
+          <SparkIcon className="size-[22px]" />
+          AI News
+        </button>
       </nav>
 
       <TemplatePicker open={picking} onClose={() => setPicking(false)} />

@@ -33,4 +33,4 @@ export const OPERATOR = "Jenil Bhalala";
 export const OPERATOR_COUNTRY = "India";
 export const CONTACT_EMAIL = "work.jenil.bhalala@gmail.com";
 /** Shown as "Last updated" on the legal pages; change it whenever they change. */
-export const LEGAL_UPDATED = "1 November 2026";
+export const LEGAL_UPDATED = "11 November 2026";

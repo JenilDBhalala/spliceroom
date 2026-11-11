@@ -4,6 +4,7 @@ import { downloadPost } from "@/lib/export";
 import { isFirstVisit, renderStateOf, useEditor } from "@/lib/store";
 import { templateInfo } from "@/lib/templates";
 import LogoMark from "./LogoMark";
+import NewsButton from "./NewsButton";
 import SizePicker from "./SizePicker";
 import TemplatePicker from "./TemplatePicker";
 import UndoButtons from "./UndoButtons";
@@ -64,6 +65,7 @@ export default function TopBar() {
           </span>
         </button>
         <SizePicker />
+        <NewsButton />
       </div>
 
       <div className="ml-auto flex items-center gap-2">

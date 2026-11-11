@@ -5,6 +5,7 @@ import { renderSlide, slidesFor } from "@/lib/render";
 import { useEditor, useRenderState } from "@/lib/store";
 import { TEMPLATE_GROUPS } from "@/lib/templates";
 import { useRedrawTick } from "@/lib/useRedrawTick";
+import NewsLink from "./NewsLink";
 
 /** Full-screen sheet on phones, centered dialog on larger screens. Each card shows a live preview. */
 export default function TemplatePicker({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -44,6 +45,7 @@ export default function TemplatePicker({ open, onClose }: { open: boolean; onClo
         </button>
       </div>
       <div className="flex flex-col gap-7 px-4 pt-5 pb-[calc(28px+env(safe-area-inset-bottom,0px))] md:px-6">
+        {open && <NewsLink from="picker" onDone={onClose} />}
         {open &&
           TEMPLATE_GROUPS.map((g) => (
             <section key={g.name} className="flex flex-col gap-3">

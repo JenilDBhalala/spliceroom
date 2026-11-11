@@ -28,7 +28,7 @@ const logoSlot = () => slot("title logo", { noPH: true });
 const listItem = (label: string, rest: Partial<ListItem> = {}): ListItem => ({
   id: nextId(), img: slot(label), logo: logoSlot(), title: "", font: "Montserrat", color: "#ffffff", rating: "", showRating: true, ...rest,
 });
-const story = (label: string, text = ""): Story => ({ id: nextId(), img: slot(label), text });
+export const story = (label: string, text = ""): Story => ({ id: nextId(), img: slot(label), text });
 const lesson = (label: string, title = "", text = ""): Lesson => ({ id: nextId(), img: slot(label), title, text });
 const row = (label: string, title = "", year = ""): TimelineRow => ({ id: nextId(), img: slot(label), logo: logoSlot(), title, year });
 

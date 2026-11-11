@@ -227,7 +227,7 @@ const dims = (im: Drawable) => [
 /** How far the scaled image overflows a w×h box, for drag math. */
 export function overflow(im: Drawable, f: Framing, w: number, h: number) {
   const [iw, ih] = dims(im);
-  const sc = Math.max(w / iw, h / ih) * f.zoom;
+  const sc = Math.max(Math.min(w / iw, h / ih), Math.max(w / iw, h / ih) * f.zoom);
   return [iw * sc - w, ih * sc - h];
 }
 
@@ -253,10 +253,18 @@ export function applyFx(ctx: Ctx, fx: PhotoFx | undefined, x: number, y: number,
 }
 
 /** Draws `im` filling the box, framed by `f` (and adjusted by its `fx`, if it is a photo slot). */
+/** Lowest photo zoom: zooming out stops anyway once the whole photo shows. */
+export const MIN_ZOOM = 0.4;
+
+/**
+ * Draws a photo filling the x/y/w/h box. Zoom 1 fills it exactly; above 1 crops in; below 1 shows more of the photo
+ * (never smaller than the whole photo), with a blurred, darkened copy filling the space around it.
+ */
 export function drawCover(ctx: Ctx, im: Drawable | null, f: Framing & { fx?: PhotoFx }, x: number, y: number, w: number, h: number) {
   if (!im) return;
   const [iw, ih] = dims(im);
-  const sc = Math.max(w / iw, h / ih) * f.zoom;
+  const fill = Math.max(w / iw, h / ih);
+  const sc = Math.max(Math.min(w / iw, h / ih), fill * f.zoom);
   const dw = iw * sc;
   const dh = ih * sc;
   const ex = dw - w;
@@ -265,7 +273,16 @@ export function drawCover(ctx: Ctx, im: Drawable | null, f: Framing & { fx?: Pho
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
+  if (ex < -0.5 || ey < -0.5) {
+    ctx.save();
+    const k = Math.hypot(ctx.getTransform().a, ctx.getTransform().b);
+    ctx.filter = `blur(${Math.round(36 * k)}px) brightness(.55)`;
+    // A little larger than the box, so the blur's soft edge stays outside it.
+    ctx.drawImage(im, x + (w - iw * fill * 1.15) / 2, y + (h - ih * fill * 1.15) / 2, iw * fill * 1.15, ih * fill * 1.15);
+    ctx.restore();
+  }
   applyFx(ctx, f.fx, x, y, w);
+  // Offsets move the photo across what's cropped; zoomed out, across the free space.
   ctx.drawImage(im, x - (ex * (f.ox + 1)) / 2, y - (ey * (f.oy + 1)) / 2, dw, dh);
   ctx.restore();
 }
@@ -493,15 +510,17 @@ export function newsTag(ctx: Ctx, text: string, accent: string, cx: number, y: n
   });
 }
 
-/** A small credit line ("Source: Variety") with its baseline at y. */
-export function sourceLine(ctx: Ctx, text: string, cx: number, y: number) {
-  ctx.font = archivo(500, 30);
+/** A small credit line ("Source: Variety") with its baseline at y; `ink` is its color before any of the user's own. */
+export function sourceLine(ctx: Ctx, text: string, cx: number, y: number, ink = "rgba(255,255,255,.92)") {
+  ctx.font = archivo(700, 32);
   ctx.textAlign = "center";
-  const color = tintOf("source", "rgba(255,255,255,.75)");
-  movable(ctx, "source", textBox(ctx, text.trim(), cx, y, 30), () => {
-    ctx.font = archivo(500, 30);
+  const color = tintOf("source", ink);
+  movable(ctx, "source", textBox(ctx, text.trim(), cx, y, 32), () => {
+    ctx.font = archivo(700, 32);
     ctx.textAlign = "center";
-    shadowOn(ctx, 10);
+    // A shadow helps light text over photos; under dark text it would only smudge.
+    const dark = /^#[0-9a-f]{6}$/i.test(color) && !shadeLight(color);
+    if (!dark) shadowOn(ctx, 10);
     ctx.fillStyle = color;
     ctx.fillText(text.trim(), cx, y);
     shadowOff(ctx);
@@ -509,7 +528,7 @@ export function sourceLine(ctx: Ctx, text: string, cx: number, y: number) {
 }
 
 /** True for light #rrggbb colors (dark text reads better on them). */
-function shadeLight(c: string) {
+export function shadeLight(c: string) {
   const n = parseInt(c.slice(1, 7), 16);
   if (!/^#[0-9a-f]{6}/i.test(c) || Number.isNaN(n)) return false;
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.55;

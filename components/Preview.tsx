@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Framing, ImageSlot, Region, TextMove, TextMoves } from "@/types/post";
 import { renderSlide } from "@/lib/render";
-import { imageOf, overflow } from "@/lib/render/helpers";
+import { MIN_ZOOM, imageOf, overflow } from "@/lib/render/helpers";
 import { getIn, loadFileInto, slideLayers, useEditor, useRenderState, useSlides } from "@/lib/store";
 import { useRedrawTick } from "@/lib/useRedrawTick";
 
@@ -111,7 +111,7 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
   const setScale = (reg: Region, v: number) => {
     const { update } = useEditor.getState();
     if (reg.text) return update(reg.path, { [reg.text.key]: { ...moveOf(reg), s: Math.max(0.3, Math.min(3, v)) } });
-    if (!reg.layer) return update(reg.path, { zoom: Math.max(1, Math.min(3, v)) });
+    if (!reg.layer) return update(reg.path, { zoom: Math.max(MIN_ZOOM, Math.min(3, v)) });
     const [lo, hi] = reg.layer.resize === "size" ? [10, 420] : [0.05, 1.2];
     update(reg.path, { [reg.layer.resize]: Math.max(lo, Math.min(hi, v)) });
   };
@@ -273,8 +273,9 @@ export default function Preview({ fit = false, onItemTap }: { fit?: boolean; onI
           if (im) {
             const [ex, ey] = overflow(im, f, g.reg.w, g.reg.h);
             const patch: Partial<Framing> = {};
-            if (ex > 0) patch.ox = Math.max(-1, Math.min(1, f.ox - (2 * (pt.x - g.last.x)) / ex));
-            if (ey > 0) patch.oy = Math.max(-1, Math.min(1, f.oy - (2 * (pt.y - g.last.y)) / ey));
+            // Zoomed in, dragging pans over what's cropped; zoomed out (negative overflow), it moves the photo in the free space.
+            if (Math.abs(ex) > 0.5) patch.ox = Math.max(-1, Math.min(1, f.ox - (2 * (pt.x - g.last.x)) / ex));
+            if (Math.abs(ey) > 0.5) patch.oy = Math.max(-1, Math.min(1, f.oy - (2 * (pt.y - g.last.y)) / ey));
             st.update(g.reg.path, patch);
           }
           g.last = pt;

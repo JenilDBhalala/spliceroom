@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Framing, PhotoFx, ImageSlot as Slot, SlotPath } from "@/types/post";
+import { MIN_ZOOM } from "@/lib/render/helpers";
 import { getIn, loadFileInto, useEditor } from "@/lib/store";
 import Slider from "./Slider";
 import Toggle from "./Toggle";
@@ -91,7 +92,7 @@ export default function ImageSlot({ label, path, framingPath, contain, tip = "Ta
             <span>Zoom</span>
             <input
               type="range"
-              min={1}
+              min={MIN_ZOOM}
               max={3}
               step={0.01}
               aria-label={`${label} zoom`}

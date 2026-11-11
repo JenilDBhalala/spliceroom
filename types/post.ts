@@ -199,6 +199,14 @@ export interface NewsPost {
   img: ImageSlot;
   inset: ImageSlot;
   insetOn: boolean;
+  /** Cover headline: each line stretched to the full width, or every line the same size; unset = stretched. */
+  coverStyle?: "stretch" | "even";
+  /** Layout of the cover and story slides; unset = full photo. */
+  design?: "photo" | "band" | "frame";
+  /** Headline options from "Make it from a news link", to switch between. */
+  headlines?: string[];
+  /** Photos found for the story (links only), to put on any slide. */
+  found?: { url: string; from: string }[];
   text: string;
   /** Small label above the headline, e.g. BREAKING; empty = hidden. */
   tag?: string;
