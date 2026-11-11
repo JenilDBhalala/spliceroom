@@ -2,7 +2,7 @@
 export const SITE_NAME = "Spliceroom";
 export const SITE_TITLE = "Spliceroom: free meme, poster & Instagram post maker";
 export const SITE_DESCRIPTION =
-  "Make memes, movie posters, quote cards, tweet-style posts, carousels and stories for Instagram in seconds. Free templates, 20+ social media fonts, 4:5, 1:1 and 9:16 sizes. Works on your phone, nothing to install.";
+  "Make memes, movie posters, quote cards, tweet-style posts, carousels, stories and cinema news posts with AI for Instagram in seconds. Free templates, 20+ social media fonts, 4:5, 1:1 and 9:16 sizes. Works on your phone, nothing to install.";
 export const SITE_KEYWORDS = [
   "meme maker",
   "meme generator",
@@ -14,6 +14,8 @@ export const SITE_KEYWORDS = [
   "tweet image generator",
   "social media post templates",
   "free poster maker",
+  "movie news post maker",
+  "cinema news instagram post",
 ];
 
 /**

@@ -356,7 +356,6 @@ From the article(s) below (several sources may cover the same story), write:
 - "films": the film or show titles in the story. "people": the main people's full names.
 Use only facts stated in the articles. Do not guess dates, numbers or names that are not in them.`;
 
-/** Gemini's headlines and slides from one or more articles, or null when there's no key or the call fails (the caller falls back). */
 /** A visitor's own Gemini key and model, sent with their request and never stored. */
 export interface OwnAi {
   key: string;
@@ -370,30 +369,22 @@ function ownKeyError(status: number) {
   return "Your Gemini key didn't work. Check it in AI settings.";
 }
 
-export async function askGemini(articles: Article[], own?: OwnAi): Promise<NewsPostDraft | null> {
+/**
+ * Asks Gemini for JSON matching `schema`, with the visitor's own key or ours. Null when there's no key or the call fails;
+ * with the visitor's own key, a refusal throws a NewsError they can act on instead.
+ */
+async function geminiJson<T>(prompt: string, schema: object, own: OwnAi | undefined, temperature: number): Promise<Partial<T> | null> {
   const key = own?.key ?? process.env.GEMINI_API_KEY;
-  const usable = articles.filter((a) => a.text);
-  if (!key || !usable.length) return null;
+  if (!key) return null;
   const model = own?.model || process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
-  const share = Math.floor(12000 / usable.length);
-  const text = usable.map((a) => `Source: ${a.site}\nTitle: ${a.title}\n\n${a.text.slice(0, share)}`).join("\n\n---\n\n");
-  const strings = { type: "ARRAY", items: { type: "STRING" } };
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: "POST",
       signal: AbortSignal.timeout(25000),
       headers: { "content-type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: `${PROMPT}\n\n${text}` }] }],
-        generationConfig: {
-          temperature: 0.5,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: { headlines: strings, slides: strings, tag: { type: "STRING" }, films: strings, people: strings },
-            required: ["headlines", "slides", "tag", "films", "people"],
-          },
-        },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature, responseMimeType: "application/json", responseSchema: schema },
       }),
     });
     if (!res.ok) {
@@ -403,32 +394,55 @@ export async function askGemini(articles: Article[], own?: OwnAi): Promise<NewsP
       return null;
     }
     const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    const out = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text ?? "") as Partial<NewsPostDraft>;
-    const list = (v: unknown, n: number) =>
-      Array.isArray(v)
-        ? v
-            .map((s) => String(s).trim())
-            .filter(Boolean)
-            .slice(0, n)
-        : [];
-    const headlines = list(out.headlines, 3).map((h) => h.replace(/\.$/, ""));
-    const slides = list(out.slides, 3);
-    if (!headlines.length || !slides.length) return null;
-    return {
-      headlines,
-      slides,
-      tag: String(out.tag ?? "")
-        .trim()
-        .toUpperCase()
-        .slice(0, 24),
-      films: list(out.films, 3),
-      people: list(out.people, 3),
-    };
+    return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text ?? "") as Partial<T>;
   } catch (e) {
     if (e instanceof NewsError) throw e;
     console.error("Gemini", e);
     return null;
   }
+}
+
+const STRINGS = { type: "ARRAY", items: { type: "STRING" } };
+
+/** Up to `n` non-empty trimmed strings from an AI list. */
+const list = (v: unknown, n: number) =>
+  Array.isArray(v)
+    ? v
+        .map((s) => String(s).trim())
+        .filter(Boolean)
+        .slice(0, n)
+    : [];
+
+/** Gemini's headlines and slides from one or more articles, or null when there's no key or the call fails (the caller falls back). */
+export async function askGemini(articles: Article[], own?: OwnAi): Promise<NewsPostDraft | null> {
+  const usable = articles.filter((a) => a.text);
+  if (!usable.length) return null;
+  const share = Math.floor(12000 / usable.length);
+  const text = usable.map((a) => `Source: ${a.site}\nTitle: ${a.title}\n\n${a.text.slice(0, share)}`).join("\n\n---\n\n");
+  const out = await geminiJson<NewsPostDraft>(
+    `${PROMPT}\n\n${text}`,
+    {
+      type: "OBJECT",
+      properties: { headlines: STRINGS, slides: STRINGS, tag: { type: "STRING" }, films: STRINGS, people: STRINGS },
+      required: ["headlines", "slides", "tag", "films", "people"],
+    },
+    own,
+    0.5,
+  );
+  if (!out) return null;
+  const headlines = list(out.headlines, 3).map((h) => h.replace(/\.$/, ""));
+  const slides = list(out.slides, 3);
+  if (!headlines.length || !slides.length) return null;
+  return {
+    headlines,
+    slides,
+    tag: String(out.tag ?? "")
+      .trim()
+      .toUpperCase()
+      .slice(0, 24),
+    films: list(out.films, 3),
+    people: list(out.people, 3),
+  };
 }
 
 /** Reads a visitor's own key and model from the request headers; null when they didn't set one. */

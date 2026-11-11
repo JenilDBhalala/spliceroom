@@ -47,6 +47,11 @@ export default function TermsPage() {
         don&rsquo;t present a rumor as confirmed news.
       </p>
       <p>
+        Our free AI has a daily limit per person and may change or stop at any time; when it&rsquo;s unavailable, posts use the
+        article&rsquo;s own title. If you add your own Gemini API key, you are responsible for your Google account, its limits and any costs,
+        and for following Google&rsquo;s terms. The news list links to articles on other websites, whose content we don&rsquo;t control.
+      </p>
+      <p>
         If you own content shown by {SITE_NAME} and want it removed, write to {mail} with a link to it, and we&rsquo;ll act on it promptly.
       </p>
 

@@ -26,8 +26,9 @@ export default function PrivacyPage() {
           anything you put into a post.
         </li>
         <li>
-          If you use the <strong>news tools</strong>, our server opens the news articles you pick, and their text is sent to Google&rsquo;s
-          Gemini API to write the headlines and slides. Nothing else from your device is sent.
+          If you use the <strong>AI news tools</strong>, your search words and the links you pick go to our server, which opens those
+          articles and sends their text to Google&rsquo;s Gemini API to write the headlines and slides. If you add your own Gemini key, it is
+          sent along with those requests and never stored. Nothing else from your device is sent.
         </li>
         <li>There are no accounts, and we don&rsquo;t ask for your name or email.</li>
         <li>
@@ -41,7 +42,8 @@ export default function PrivacyPage() {
       <p>
         So your work is still there when you come back, {SITE_NAME} saves it in your browser&rsquo;s own storage on your device (IndexedDB and
         localStorage). This includes the text, photos and settings of your posts, your brand details (page name, logo, profile picture), the
-        post size you chose and your cookie choice. This data is never sent to us. You can delete it at any time by clearing this site&rsquo;s
+        post size you chose, your cookie choice and, if you add one, your own Gemini API key. This data is never sent to us, except your Gemini
+        key, which goes with your news requests as described in section 3. You can delete it at any time by clearing this site&rsquo;s
         data in your browser settings, or by using &ldquo;Start over&rdquo; in a template.
       </p>
 
@@ -55,8 +57,8 @@ export default function PrivacyPage() {
         <li>device and browser type, screen size and language;</li>
         <li>approximate location (country and city), which Google derives from your IP address. Google Analytics 4 does not store IP addresses;</li>
         <li>
-          two events from the app: which template you choose, and when you download a post (the template, post size and image quality, never the
-          image or its text).
+          three events from the app: which template you choose, when you open the AI news tools (and from which button), and when you
+          download a post (the template, post size and image quality, never the image or its text).
         </li>
       </ul>
       <p>
@@ -85,19 +87,22 @@ export default function PrivacyPage() {
         served from our own site, so loading {SITE_NAME} doesn&rsquo;t contact font services.
       </p>
       <p>
-        When you use the news tools (&ldquo;Make it from a news link&rdquo; or &ldquo;Find cinema news&rdquo;), our server reads public film
-        news feeds, downloads the articles you pick and their images, and sends any search words you type to our own server only. The
-        articles&rsquo; text is sent to the Gemini API (Google LLC) to write headlines and short slides; Google processes it under its Gemini
-        API terms. If you add your own Gemini API key, it is saved only in your browser and sent to our server with your news requests,
+        When you use the AI news tools (&ldquo;AI news post&rdquo; and &ldquo;Find cinema news&rdquo;), our server reads public film news
+        feeds, downloads the articles you pick (or the link you paste) and their images, and receives any search words you type; search words
+        go to our own server only. The articles&rsquo; text is sent to the Gemini API (Google LLC) to write headlines and short slides; Google
+        processes it under its Gemini API terms, and on Google&rsquo;s free tier may use it to improve its products. It is public article text
+        and contains nothing about you. If you add your own Gemini API key, it is saved only in your browser and sent to our server with your news requests,
         which use it for that request only and never store or log it; Google then processes the articles under your own agreement with
         Google. We don&rsquo;t store your searches, the links, the articles or the results. To limit misuse, we count how
-        many stories each IP address turns into posts per day, in memory only.
+        many stories each IP address turns into posts per day, in memory only. The outlet names in the news list link to the original
+        articles on those sites, which have their own privacy policies.
       </p>
 
       <h2>4. Legal bases (GDPR and UK GDPR)</h2>
       <ul>
         <li>Analytics: your consent where it is required, which you can withdraw at any time.</li>
         <li>Hosting logs: our legitimate interest in running a secure, working website.</li>
+        <li>AI news tools: providing the feature you ask for; counting requests per IP address: our legitimate interest in preventing misuse.</li>
       </ul>
 
       <h2>5. International transfers</h2>
